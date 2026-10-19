@@ -1,0 +1,107 @@
+      <!-- ============ REPORTS ============ -->
+      <section v-if="tab === 'reports'" class="space-y-5 animate-fade-up">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div><h2 class="text-2xl font-extrabold text-slate-800">Laporan Kegiatan</h2><p class="text-sm text-slate-500">Laporan hanya dari ST terbit. Laporan terverifikasi otomatis melahirkan tindak lanjut.</p></div>
+          <div class="flex gap-2 w-full sm:w-auto flex-wrap">
+            <button @click="exportReportsCsv" class="flex-1 sm:flex-none justify-center px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition-colors" title="Unduh Excel/CSV sesuai filter aktif"><i class="fa-solid fa-file-excel text-emerald-600"></i> Excel/CSV</button>
+            <button @click="exportReportsPdf" class="flex-1 sm:flex-none justify-center px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition-colors" title="Cetak / Simpan PDF sesuai filter aktif"><i class="fa-solid fa-file-pdf text-red-500"></i> PDF</button>
+            <button @click="openNewReport" class="flex-1 sm:flex-none justify-center px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl shadow-md flex items-center gap-2 transition-all hover:-translate-y-0.5"><i class="fa-solid fa-plus"></i> Buat Laporan Baru</button>
+          </div>
+        </div>
+        
+        <!-- Filter Bar Laporan -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row gap-3">
+          <div class="relative flex-1">
+            <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400"></i>
+            <input v-model="qReport" @input="resetPage('reports')" placeholder="Cari kode, nomor ST, kegiatan, lokasi…" class="inp !text-sm !pl-10 w-full bg-slate-50 focus:bg-white transition-colors shadow-inner">
+          </div>
+          <select v-model="filterYear" @change="resetPage('reports')" class="inp sm:w-32 bg-slate-50 focus:bg-white cursor-pointer">
+            <option :value="0">Semua Tahun</option>
+            <option v-for="y in yearsList" :value="y">{{ y }}</option>
+          </select>          
+          <select v-model="filterMonth" @change="resetPage('reports')" class="inp sm:w-40 bg-slate-50 focus:bg-white cursor-pointer">
+            <option :value="0">Semua Bulan</option>
+            <option v-for="m in monthsList" :value="m.val">{{ m.label }}</option>
+          </select>
+          <select v-model="fReportStatus" @change="resetPage('reports')" class="inp sm:w-56 bg-slate-50 focus:bg-white cursor-pointer"><option value="ALL">Semua Status Laporan</option><option v-for="(v,k) in REPORT_STATUS" :value="k">{{ v.label }}</option></select>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
+          <div class="overflow-x-auto">
+            <!-- Lebar tabel diperbesar menjadi 1100px agar 6 kolom muat dengan lega -->
+            <table class="w-full text-left text-sm min-w-[1200px]">
+              <thead>
+                <tr class="bg-slate-50/80 text-slate-500 border-b border-slate-200 font-semibold text-[11px] uppercase tracking-widest">
+                  <th class="p-4 pl-6 w-[150px]">Kode &amp; ST</th>
+                  <th class="p-4 w-[36%]">Uraian Pelaksanaan</th>
+                  <th class="p-4 w-[32%]">Hasil / Temuan</th>
+                  <th class="p-4 w-[120px]">Pelanggaran &amp; Bukti</th>
+                  <th class="p-4 w-[110px]">Status</th>
+                  <th class="p-4 text-right pr-6 w-[80px]">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-if="!filteredReports.length">
+                  <td colspan="6" class="text-center py-12 text-slate-400">
+                    <i class="fa-regular fa-file-lines text-4xl mb-3 block opacity-50"></i>Belum ada laporan yang cocok.
+                  </td>
+                </tr>
+                <tr v-for="rep in paginatedReports" :key="rep.id" class="hover:bg-emerald-50/30 transition-colors group">
+                  
+                  <!-- 1. Kolom Kode & ST -->
+                  <td class="p-4 pl-6 align-top">
+                    <p class="font-bold text-slate-800 group-hover:text-emerald-700 cursor-pointer break-words" @click="detailReport = rep">{{ rep.code }}</p>
+                    <p class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded inline-block mt-1 border border-emerald-100"><i class="fa-solid fa-link text-[8px]"></i> {{ rep.stNumber || '-' }}</p>
+                    <p class="text-[10px] text-slate-400 mt-1.5"><i class="fa-regular fa-clock mr-1"></i>{{ fmtDateTime(rep.actualTime) }}</p>
+                  </td>
+
+                  <!-- 2. Kolom Uraian Pelaksanaan -->
+                  <td class="p-4 text-xs align-top">
+                    <p class="font-bold text-sm text-slate-800 mb-1.5">{{ rep.activityName }}</p>
+                    <p class="text-slate-600 leading-relaxed line-clamp-4 break-words" :title="rep.description">{{ rep.description }}</p>
+                    <p v-if="rep.status === 'RETURNED' && rep.verificationNote" class="text-[11px] text-red-600 mt-2 bg-red-50 p-1.5 rounded border border-red-100">
+                      <i class="fa-solid fa-circle-info mr-1"></i>{{ rep.verificationNote }}
+                    </p>
+                  </td>
+
+                  <!-- 3. Kolom Hasil / Temuan -->
+                  <td class="p-4 text-xs align-top">
+                    <p class="text-slate-600 leading-relaxed line-clamp-4 break-words" :title="rep.results">{{ rep.results || '-' }}</p>
+                  </td>
+
+                  <!-- 4. Kolom Pelanggaran & Bukti -->
+                  <td class="p-4 text-xs align-top">
+                    <p class="font-bold text-slate-700"><i class="fa-solid fa-user-xmark text-red-400 mr-1"></i> {{ rep.violatorCount }} temuan</p>
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 font-semibold rounded-md border border-slate-200 inline-block mt-2 shadow-sm whitespace-nowrap"><i class="fa-solid fa-paperclip text-slate-400"></i> {{ rep.evidenceList.length }} berkas</span>
+                  </td>
+
+                  <!-- 5. Kolom Status -->
+                  <td class="p-4 align-top">
+                    <span :class="(REPORT_STATUS[rep.status] || {}).cls" class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold ring-1 shadow-sm whitespace-nowrap">{{ (REPORT_STATUS[rep.status] || {}).label || rep.status }}</span>
+                  </td>
+
+                  <!-- 6. Kolom Aksi -->
+                  <td class="p-4 pr-6 align-top">
+                    <div class="flex justify-end gap-1.5 flex-wrap">
+                      <button @click="detailReport = rep" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors" title="Detail"><i class="fa-regular fa-eye"></i></button>
+                      <button v-if="rep.status === 'SUBMITTED' && ['KOORDINATOR','ADMIN'].includes(role)" @click="openNote('verifyReport', rep.id, 'Verifikasi ' + rep.code, false)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors" title="Verifikasi"><i class="fa-solid fa-user-check"></i></button>
+                      <button v-if="['DRAFT','RETURNED'].includes(rep.status)" @click="openEditReport(rep)" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg transition-colors border border-blue-200" title="Revisi"><i class="fa-solid fa-pen"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Paginasi Laporan -->
+          <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/30 gap-4">
+            <span class="text-[11px] text-slate-500">
+              Menampilkan <b>{{ Math.min((currentPage.reports - 1) * itemsPerPage + 1, filteredReports.length) }}</b> - <b>{{ Math.min(currentPage.reports * itemsPerPage, filteredReports.length) }}</b> dari <b>{{ filteredReports.length }}</b> data
+            </span>
+            <div class="flex gap-1 flex-wrap">
+              <button @click="currentPage.reports = Math.max(1, currentPage.reports - 1)" :disabled="currentPage.reports === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Prev</button>
+              <button v-for="p in totalReportPages" :key="p" @click="currentPage.reports = p" :class="currentPage.reports === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors">{{ p }}</button>
+              <button @click="currentPage.reports = Math.min(totalReportPages, currentPage.reports + 1)" :disabled="currentPage.reports === totalReportPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            </div>
+          </div>
+        </div>
+      </section>
