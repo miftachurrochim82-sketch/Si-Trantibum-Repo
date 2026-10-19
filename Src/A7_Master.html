@@ -1,0 +1,156 @@
+<!-- ============ ADMIN ============ -->
+      <section v-if="tab === 'admin' && role === 'ADMIN'" class="space-y-5 animate-fade-up">
+        <div><h2 class="text-2xl font-extrabold text-slate-800">Administrasi Sistem</h2><p class="text-sm text-slate-500">Kelola 8 master data terintegrasi langsung dengan Spreadsheet.</p></div>
+        
+        <!-- Tab Bar Master Data -->
+        <div class="flex flex-wrap gap-2">
+          <!-- Tombol Khusus Gabungan Wilayah -->
+          <button @click="adminSub = 'wilayah'; qMaster = ''; resetPage('master')" :class="adminSub === 'wilayah' ? 'bg-slate-900 text-white shadow-md ring-2 ring-slate-900 ring-offset-2 scale-105' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2">
+            Wilayah & Desa <span :class="adminSub === 'wilayah' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'" class="px-1.5 py-0.5 rounded text-[10px]">{{ data.regions.length }}</span>
+          </button>
+
+          <!-- Looping Master Lainnya (Sembunyikan regions & villages dari loop) -->
+          <template v-for="(def, key) in MASTER_DEFS" :key="key">
+            <button v-if="key !== 'regions' && key !== 'villages'" @click="adminSub = key; qMaster = ''; resetPage('master')" :class="adminSub === key ? 'bg-slate-900 text-white shadow-md ring-2 ring-slate-900 ring-offset-2 scale-105' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2">
+              {{ def.label }} <span :class="adminSub === key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'" class="px-1.5 py-0.5 rounded text-[10px]">{{ data[key].length }}</span>
+            </button>
+          </template>
+        </div>
+        
+        <!-- ================= KONTEN KHUSUS: WILAYAH & DESA ================= -->
+        <div v-if="adminSub === 'wilayah'" class="space-y-4">
+          <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+              <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-map-location-dot text-emerald-600 mr-2"></i> Manajemen Wilayah & Desa</h3>
+              <p class="text-[11px] text-slate-500 mt-1">Kelola daftar Kecamatan beserta Desa/Kelurahan di dalamnya.</p>
+            </div>
+            <button @click="openMaster('regions')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm shrink-0 transition-colors"><i class="fa-solid fa-plus"></i> Tambah Kecamatan</button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div v-for="reg in data.regions.filter(r => r.name.toLowerCase().includes(qMaster.toLowerCase()))" :key="reg.code" class="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+              <!-- Header Kecamatan -->
+              <div class="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-start">
+                <div>
+                  <h4 class="font-extrabold text-sm text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-building text-slate-400"></i> {{ reg.name }}
+                    <span :class="reg.risk === 'Tinggi' ? 'bg-red-100 text-red-700' : reg.risk === 'Sedang' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'" class="px-2 py-0.5 rounded text-[9px] font-bold border border-transparent">{{ reg.risk }}</span>
+                  </h4>
+                  <p class="text-[10px] text-slate-400 font-mono mt-1">Kode: {{ reg.code }} · {{ data.villages.filter(v => v.regionCode === reg.code).length }} Desa</p>
+                </div>
+                <div class="flex gap-1">
+                  <button @click="openMaster('regions', reg)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors" title="Edit Kecamatan"><i class="fa-solid fa-pen text-xs"></i></button>
+                  <button @click="confirmDeleteMaster(reg)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors" title="Hapus Kecamatan"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+              </div>
+              
+              <!-- List Desa -->
+              <div class="p-3 flex-1 overflow-y-auto max-h-[250px] space-y-1.5 custom-scrollbar bg-white">
+                <div v-for="v in data.villages.filter(x => x.regionCode === reg.code)" :key="v.code" class="flex justify-between items-center group px-2.5 py-1.5 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-semibold text-slate-700 truncate">{{ v.name }}</p>
+                    <p class="text-[9px] text-slate-400 font-mono">{{ v.code }}</p>
+                  </div>
+                  <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button @click="openMaster('villages', v)" class="text-slate-400 hover:text-blue-600 p-1" title="Edit Desa"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                    <button @click="confirmDeleteMaster(v)" class="text-slate-400 hover:text-red-600 p-1" title="Hapus Desa"><i class="fa-solid fa-trash text-[10px]"></i></button>
+                  </div>
+                </div>
+                <div v-if="!data.villages.some(x => x.regionCode === reg.code)" class="text-center py-4 text-[11px] text-slate-400 italic">
+                  Belum ada desa terdaftar.
+                </div>
+              </div>
+              
+              <!-- Tombol Tambah Desa -->
+              <div class="p-3 border-t border-slate-100 bg-slate-50/50">
+                <button @click="openMaster('villages', null, { regionCode: reg.code })" class="w-full py-1.5 bg-white border border-slate-300 hover:border-emerald-400 hover:text-emerald-700 text-slate-600 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-plus"></i> Tambah Desa
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= KONTEN MASTER DATA LAINNYA ================= -->
+        <div v-if="adminSub !== 'wilayah'" class="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
+          <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
+            <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-database text-emerald-600 mr-2"></i> Master Data: {{ MASTER_DEFS[adminSub].label }}</h3>
+            <div class="flex w-full sm:w-auto gap-2">
+              <div class="relative flex-1 sm:w-64"><i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i><input v-model="qMaster" @input="resetPage('master')" placeholder="Cari data…" class="inp !py-2 !pl-8 text-xs w-full"></div>
+              <button @click="openMaster(adminSub)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm shrink-0 transition-colors"><i class="fa-solid fa-plus"></i> Tambah</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm min-w-[720px]">
+              <thead><tr class="bg-slate-50 text-slate-500 border-b border-slate-200 font-bold text-[10px] uppercase tracking-widest"><th v-for="c in MASTER_DEFS[adminSub].columns" :key="c.key" class="p-3 pl-5">{{ c.label }}</th><th class="p-3 text-right pr-5">Aksi</th></tr></thead>
+              <tbody class="divide-y divide-slate-100 text-xs">
+                <tr v-if="!masterRows.length"><td :colspan="MASTER_DEFS[adminSub].columns.length + 1" class="text-center py-10 text-slate-400">Tidak ada data ditemukan.</td></tr>
+                <tr v-for="row in paginatedMaster" :key="row.id" class="hover:bg-emerald-50/40 transition-colors group">
+                  <td v-for="c in MASTER_DEFS[adminSub].columns" :key="c.key" class="p-3 pl-5">
+                    <span v-if="c.key === 'canSign'"><span v-if="row.canSign" class="px-2 py-0.5 bg-amber-100 text-amber-800 font-extrabold rounded text-[9px] border border-amber-200"><i class="fa-solid fa-check-circle mr-1"></i> can_sign</span><span v-else class="text-slate-300">—</span></span>
+                    <span v-else-if="c.key === 'classification' || c.key === 'risk'" :class="badgeFor(row[c.key])" class="px-2 py-0.5 rounded-md font-bold text-[9px] border shadow-sm">{{ row[c.key] }}</span>
+                    <span v-else-if="c.key === 'regionCode'" class="bg-slate-100 px-2 py-1 rounded text-slate-600">{{ regionName(row.regionCode) }}</span>
+                    <span v-else-if="c.key === 'name'">
+                      <span class="font-bold text-slate-800 block">{{ row.name }}</span>
+                      <span v-if="adminSub !== 'signers'" class="text-[10px] text-slate-500 font-mono mt-0.5">NIP. {{ row.nip || '-' }}</span>
+                    </span>
+                    <span v-else :class="c.key === 'perdaNo' ? 'font-bold text-slate-800' : 'text-slate-500'">{{ row[c.key] }}</span>
+                  </td>
+                  <td class="p-3 pr-5 text-right whitespace-nowrap">
+                    <button @click="openMaster(adminSub, row)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors mr-1" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                    <button @click="confirmDeleteMaster(row)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Paginasi Master Data -->
+          <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/30 gap-4">
+            <span class="text-[11px] text-slate-500">
+              Menampilkan <b>{{ Math.min((currentPage.master - 1) * itemsPerPage + 1, masterRows.length) }}</b> - <b>{{ Math.min(currentPage.master * itemsPerPage, masterRows.length) }}</b> dari <b>{{ masterRows.length }}</b> data
+            </span>
+            <div class="flex gap-1 flex-wrap">
+              <button @click="currentPage.master = Math.max(1, currentPage.master - 1)" :disabled="currentPage.master === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Prev</button>
+              <button v-for="p in totalMasterPages" :key="p" @click="currentPage.master = p" :class="currentPage.master === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors">{{ p }}</button>
+              <button @click="currentPage.master = Math.min(totalMasterPages, currentPage.master + 1)" :disabled="currentPage.master === totalMasterPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- ================= AUDIT TRAIL SISTEM (PAGINASI 25) ================= -->
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/60">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <h3 class="font-bold text-sm flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> Audit Trail Sistem
+              <span class="text-[10px] font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{{ data.auditLogs.length }} entri</span>
+            </h3>
+            <p class="text-[11px] text-slate-500"><i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>{{ itemsPerPage }} entri per halaman</p>
+          </div>
+          <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left text-xs min-w-[720px]">
+              <thead><tr class="bg-slate-50 text-slate-500 uppercase border-b border-slate-200 font-bold tracking-widest text-[10px]"><th class="p-3 pl-5">Waktu</th><th class="p-3">Entitas</th><th class="p-3">Aksi</th><th class="p-3">Aktor</th><th class="p-3 pr-5">Keterangan</th></tr></thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-if="!paginatedAuditLogs.length"><td colspan="5" class="text-center py-10 text-slate-400"><i class="fa-regular fa-clock text-3xl mb-2 block opacity-40"></i>Belum ada aktivitas pada halaman ini.</td></tr>
+                <tr v-for="log in paginatedAuditLogs" :key="log.id" class="hover:bg-slate-50 transition-colors">
+                  <td class="p-3 pl-5 whitespace-nowrap text-slate-500 font-mono text-[10px]"><i class="fa-regular fa-clock mr-1"></i>{{ fmtDateTime(log.createdAt) }}</td>
+                  <td class="p-3 font-mono font-bold text-emerald-700 bg-emerald-50/50 rounded">{{ log.entityCode }}</td>
+                  <td class="p-3"><span class="px-2 py-0.5 rounded bg-slate-100 font-extrabold text-[9px] text-slate-600 border border-slate-200">{{ log.action }}</span></td>
+                  <td class="p-3 font-semibold text-slate-700">{{ log.actorName }} <span class="text-[9px] font-normal text-slate-400 bg-slate-100 px-1 rounded">{{ log.actorRole }}</span></td>
+                  <td class="p-3 pr-5 text-slate-600 leading-relaxed">{{ log.detail }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Paginasi Audit Trail -->
+          <div v-if="data.auditLogs.length" class="flex flex-col sm:flex-row items-center justify-between pt-4 mt-4 border-t border-slate-100 gap-4">
+            <span class="text-[11px] text-slate-500">
+              Menampilkan <b>{{ Math.min((currentPage.audit - 1) * itemsPerPage + 1, data.auditLogs.length) }}</b> - <b>{{ Math.min(currentPage.audit * itemsPerPage, data.auditLogs.length) }}</b> dari <b>{{ data.auditLogs.length }}</b> entri
+            </span>
+            <div class="flex gap-1 flex-wrap">
+              <button @click="currentPage.audit = Math.max(1, currentPage.audit - 1)" :disabled="currentPage.audit === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Prev</button>
+              <button v-for="p in totalAuditPages" :key="p" @click="currentPage.audit = p" :class="currentPage.audit === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors">{{ p }}</button>
+              <button @click="currentPage.audit = Math.min(totalAuditPages, currentPage.audit + 1)" :disabled="currentPage.audit === totalAuditPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            </div>
+          </div>
+        </div>
+      </section>
