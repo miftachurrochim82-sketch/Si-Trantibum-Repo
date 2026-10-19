@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <base target="_top">
+  <meta name="description" content="Sistem Informasi Trantibum (SI TRANTIBUM) - Satuan Polisi Pamong Praja dan Kebakaran Kabupaten Trenggalek">
+  
+  <!-- Favicon Perisai -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+  
+  <?!= include('A0_Style'); ?>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+  
+  <!-- 1. Preloader instan (HTML/CSS murni — tampil sebelum Vue siap) -->
+  <div id="preloader" class="fixed inset-0 z-[110] bg-slate-950 flex flex-col items-center justify-center transition-opacity duration-300">
+    <div class="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+    <p class="text-emerald-400 font-mono text-[10px] font-bold tracking-[0.2em] uppercase animate-pulse">Menyiapkan Sistem...</p>
+  </div>
+
+  <!-- 2. Aplikasi Utama (Vue) -->
+  <div id="app" v-cloak>
+    <?!= include('A1_Layout'); ?>
+    <?!= include('A2_Dashboard'); ?>
+    <?!= include('A3_SuratTugas'); ?>
+    <?!= include('A4_Laporan'); ?>
+    <?!= include('A5_TindakLanjut'); ?>
+    <?!= include('A6_Rekap'); ?>
+    <?!= include('A7_Master'); ?>
+    <?!= include('A8_Modals'); ?>
+  </div>
+  
+  <!-- 3. Area Cetak (Tersembunyi di Layar) -->
+  <div id="print-area" style="display:none"></div>
+  
+  <!-- 4. Script Vue Modular -->
+<?!= include('script'); ?>
+
+</body>
+</html>
