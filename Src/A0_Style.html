@@ -1,0 +1,136 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#064e3b">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SI TRANTIBUM — Satpol PPK Kab. Trenggalek</title>
+
+<!-- Preconnect untuk Google Fonts agar loading lebih cepat -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { 
+    theme: { 
+      extend: { 
+        colors: { 
+          satpol: { light: '#14532d', DEFAULT: '#064e3b', dark: '#022c22' } 
+        },
+        fontFamily: {
+          sans: ['Inter', 'sans-serif'],
+        }
+      } 
+    } 
+  };
+</script>
+
+<script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+
+<style>
+  /* =========================================
+     1. BASE & TYPOGRAPHY
+     ========================================= */
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', sans-serif; }
+  [v-cloak] { display: none !important; }
+  
+  /* Warna seleksi teks disesuaikan dengan tema */
+  ::selection { background-color: #10b981; color: #ffffff; }
+
+  /* Custom Scrollbar (Webkit & Firefox) */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  * { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+
+  /* =========================================
+     2. FORM CONTROLS & COMPONENTS
+     ========================================= */
+  .inp { width:100%; border:1px solid #cbd5e1; border-radius:.75rem; padding:.625rem .75rem; font-size:.75rem; background:#fff; transition: all 0.2s ease-in-out; }
+  .inp:focus { outline:none; border-color:#065f46; box-shadow:0 0 0 3px rgba(6,95,70,.18); background: #f8fafc; }
+  .inp:disabled { background-color: #f1f5f9; cursor: not-allowed; color: #94a3b8; }
+  
+  .lbl { display:block; font-weight:600; color:#334155; margin-bottom:.375rem; font-size:.75rem; }
+  .rown { display:inline-flex; align-items:center; justify-content:center; width:1.25rem; height:1.25rem; border-radius:.375rem; background:#022c22; color:#fff; font-size:10px; font-weight:800; margin-right:.5rem; }
+
+  /* Glassmorphism Utility */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  /* Text Glow untuk Tampilan Modern */
+  .text-glow { text-shadow: 0 0 10px rgba(52, 211, 153, 0.5); }
+
+  /* =========================================
+     3. ANIMATIONS
+     ========================================= */
+  @keyframes float { 
+    0%, 100% { transform: translateY(0px); } 
+    50% { transform: translateY(-12px); } 
+  }
+  @keyframes shake { 
+    0%, 100% { transform: translateX(0); } 
+    20%, 60% { transform: translateX(-6px); } 
+    40%, 80% { transform: translateX(6px); } 
+  }
+  @keyframes shimmer { 
+    0% { background-position: -1000px 0; } 
+    100% { background-position: 1000px 0; } 
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-float { animation: float 5s ease-in-out infinite; }
+  .animate-shake { animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) both; }
+  .animate-fade-up { animation: fadeInUp 0.4s ease-out forwards; }
+  
+  .shimmer-bg {
+    background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2.5s infinite linear;
+  }
+
+  /* =========================================
+     4. PRINT STYLES (Surat Tugas)
+     ========================================= */
+  @media print {
+    /* Sembunyikan semua elemen web */
+    body * { visibility: hidden; }
+    
+    /* Hanya tampilkan area cetak */
+    #print-area, #print-area * { visibility: visible; }
+    #print-area { 
+      position: absolute; 
+      inset: 0; 
+      display: block !important; 
+      padding: 0; 
+      margin: 0;
+      width: 100%;
+    }
+    
+    /* Pastikan warna latar belakang (seperti header tabel hijau) ikut tercetak */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Pengaturan Kertas A4 */
+    @page { 
+      size: A4 portrait; 
+      margin: 15mm 20mm; 
+    }
+    
+    /* Hindari pemotongan tabel di tengah halaman */
+    tr { page-break-inside: avoid; }
+  }
+</style>
