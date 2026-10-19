@@ -1,0 +1,57 @@
+      <!-- ============ FOLLOWUPS ============ -->
+      <section v-if="tab === 'followups'" class="space-y-5 animate-fade-up">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div><h2 class="text-2xl font-extrabold text-slate-800">Manajemen Tindak Lanjut</h2><p class="text-sm text-slate-500">Aksi lanjutan laporan terverifikasi — PIC, prioritas, tenggat. Merah = lewat tenggat.</p></div>
+          <div class="flex gap-2 flex-wrap">
+            <div class="bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1 border border-slate-200">
+              <button v-for="f in [['ALL','Semua'],['PROSES','Dalam Proses'],['OVERDUE','Lewat Tenggat'],['SELESAI','Selesai']]" :key="f[0]" @click="fFuStatus = f[0]; resetPage('fu')" :class="fFuStatus === f[0] ? 'bg-white text-emerald-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all">{{ f[1] }}</button>
+            </div>
+            <button @click="openNewFu()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl shadow-md flex items-center gap-2 transition-all hover:-translate-y-0.5"><i class="fa-solid fa-plus"></i> TL Manual</button>
+          </div>
+        </div>
+        
+        <p v-if="!filteredFu.length" class="bg-white rounded-3xl border border-dashed text-center py-16 text-slate-400 text-sm"><i class="fa-regular fa-folder-open text-4xl mb-3 block opacity-50"></i>Tidak ada tindak lanjut pada filter ini.</p>
+        
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div v-for="fu in paginatedFu" :key="fu.id" :class="isOverdue(fu) ? 'border-red-300 ring-2 ring-red-100' : 'border-slate-200'" class="group bg-white p-5 rounded-3xl shadow-sm border flex flex-col justify-between gap-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+            <div v-if="isOverdue(fu)" class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-400"></div>
+            <div v-else-if="fu.status === 'SELESAI'" class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500"></div>
+            <div v-else class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-yellow-300"></div>
+            
+            <div>
+              <div class="flex justify-between gap-2 mb-3 flex-wrap mt-1">
+                <span class="px-2.5 py-1 bg-violet-50 text-violet-700 text-[10px] font-bold rounded-lg uppercase border border-violet-100"><i class="fa-solid fa-user-tag mr-1"></i> {{ fu.pic || '-' }}</span>
+                <span :class="fu.status === 'SELESAI' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : isOverdue(fu) ? 'bg-red-50 text-red-700 border-red-200 animate-pulse' : 'bg-amber-50 text-amber-700 border-amber-200'" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border shadow-sm">{{ fu.status === 'SELESAI' ? 'SELESAI' : isOverdue(fu) ? 'TERLAMBAT' : 'PROSES' }}</span>
+              </div>
+              <h3 class="font-bold text-sm leading-relaxed text-slate-800 group-hover:text-emerald-800 transition-colors">{{ fu.actionRequired }}</h3>
+              <div class="mt-4 space-y-2 text-xs text-slate-500 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                <p :class="isOverdue(fu) ? 'text-red-600 font-bold' : ''" class="flex items-center gap-2"><i class="fa-regular fa-calendar-xmark text-slate-400 w-4 text-center"></i> Tenggat: {{ fmtDate(fu.deadline) }}</p>
+                <p class="flex items-center gap-2"><i class="fa-solid fa-flag text-slate-400 w-4 text-center"></i> Prioritas: <span class="font-semibold text-slate-700">{{ fu.priority }}</span></p>
+                <p class="flex items-center gap-2"><i class="fa-solid fa-building text-slate-400 w-4 text-center"></i> {{ fu.picUnit || '-' }}</p>
+                <p v-if="fu.progressNote" class="bg-white rounded-lg p-2 border border-slate-200 mt-2 text-[11px]"><b class="text-slate-600 block mb-0.5"><i class="fa-solid fa-spinner fa-spin-pulse mr-1"></i>Progres:</b> {{ fu.progressNote }}</p>
+                <p v-if="fu.status === 'SELESAI' && fu.completionNote" class="bg-emerald-50 rounded-lg p-2 border border-emerald-200 mt-2 text-[11px] text-emerald-800"><b class="block mb-0.5"><i class="fa-solid fa-check-double mr-1"></i>Selesai:</b> {{ fu.completionNote }}</p>
+              </div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex justify-between items-center gap-2">
+              <span class="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">{{ fu.code }}</span>
+              <span class="flex gap-1.5" v-if="fu.status !== 'SELESAI'">
+                <button @click="openEditFu(fu)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-lg transition-colors" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button @click="openNote('completeFu', fu.id, 'Selesaikan ' + fu.code, false)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all hover:scale-105 flex items-center gap-1.5"><i class="fa-solid fa-check"></i> Selesai</button>
+              </span>
+              <span v-else class="text-[11px] text-emerald-600 font-extrabold bg-emerald-50 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-circle-check mr-1"></i> Tuntas</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paginasi Tindak Lanjut -->
+        <div v-if="filteredFu.length" class="flex flex-col sm:flex-row items-center justify-between bg-white border border-slate-200 rounded-3xl p-4 shadow-sm mt-4 gap-4">
+          <span class="text-[11px] text-slate-500">
+            Menampilkan <b>{{ Math.min((currentPage.fu - 1) * itemsPerPage + 1, filteredFu.length) }}</b> - <b>{{ Math.min(currentPage.fu * itemsPerPage, filteredFu.length) }}</b> dari <b>{{ filteredFu.length }}</b> data
+          </span>
+          <div class="flex gap-1 flex-wrap">
+            <button @click="currentPage.fu = Math.max(1, currentPage.fu - 1)" :disabled="currentPage.fu === 1" class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed">Prev</button>
+            <button v-for="p in totalFuPages" :key="p" @click="currentPage.fu = p" :class="currentPage.fu === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 border border-slate-300 text-slate-600 hover:bg-slate-100'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors">{{ p }}</button>
+            <button @click="currentPage.fu = Math.min(totalFuPages, currentPage.fu + 1)" :disabled="currentPage.fu === totalFuPages" class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+          </div>
+        </div>
+      </section>
