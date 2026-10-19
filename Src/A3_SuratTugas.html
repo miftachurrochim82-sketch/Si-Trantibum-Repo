@@ -1,0 +1,145 @@
+      <!-- ============ LETTERS ============ -->
+      <section v-if="tab === 'letters'" class="space-y-5 animate-fade-up">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div><h2 class="text-2xl font-extrabold text-slate-800">Surat Tugas (ST)</h2><p class="text-sm text-slate-500">Alur ringkas: Koordinator/Pimpinan menyusun → Pimpinan menyetujui = langsung terbit → pelaksanaan → laporan.</p></div>
+          <div class="grid grid-cols-3 gap-2 w-full sm:flex sm:w-auto sm:gap-2">
+            <button @click="exportLettersCsv" class="justify-center px-2 sm:px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-[10px] sm:text-xs rounded-xl flex items-center gap-1.5 sm:gap-2 shadow-sm transition-colors whitespace-nowrap" title="Unduh Excel/CSV sesuai filter aktif">
+              <i class="fa-solid fa-file-excel text-emerald-600"></i> Excel
+            </button>
+            <button @click="exportLettersPdf" class="justify-center px-2 sm:px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-[10px] sm:text-xs rounded-xl flex items-center gap-1.5 sm:gap-2 shadow-sm transition-colors whitespace-nowrap" title="Cetak / Simpan PDF sesuai filter aktif">
+              <i class="fa-solid fa-file-pdf text-red-500"></i> PDF
+            </button>
+            <button v-if="canCreateLetter" @click="openNewLetter" class="justify-center px-2 sm:px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-[10px] sm:text-xs rounded-xl shadow-md flex items-center gap-1.5 sm:gap-2 transition-all hover:-translate-y-0.5 whitespace-nowrap">
+              <i class="fa-solid fa-plus"></i> Buat ST Baru
+            </button>
+          </div>
+        </div>
+        
+        <!-- Filter Bar Surat Tugas -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col lg:flex-row gap-3 sticky top-[72px] z-20">
+          <div class="relative flex-1">
+            <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400"></i>
+            <input v-model="qLetter" @input="resetPage('letters')" placeholder="Cari nama kegiatan, nomor…" class="inp !text-sm !pl-10 w-full shadow-inner bg-slate-50 focus:bg-white transition-colors">
+          </div>
+          <select v-model="filterYear" @change="resetPage('letters')" class="inp lg:w-32 bg-slate-50 focus:bg-white cursor-pointer">
+            <option :value="0">Semua Tahun</option>
+            <option v-for="y in yearsList" :value="y">{{ y }}</option>
+          </select>          
+          <select v-model="filterMonth" @change="resetPage('letters')" class="inp lg:w-40 bg-slate-50 focus:bg-white cursor-pointer">
+            <option :value="0">Semua Bulan</option>
+            <option v-for="m in monthsList" :value="m.val">{{ m.label }}</option>
+          </select>
+          <select v-model="fLetterStatus" @change="resetPage('letters')" class="inp lg:w-48 bg-slate-50 focus:bg-white cursor-pointer"><option value="ALL">Semua Status</option><option v-for="(v, k) in LETTER_STATUS" :value="k">{{ v.label }}</option></select>
+          <select v-model="fLetterAct" @change="resetPage('letters')" class="inp lg:w-52 bg-slate-50 focus:bg-white cursor-pointer"><option value="ALL">Semua Jenis Kegiatan</option><option v-for="a in data.activityTypes" :value="a.code">{{ a.name }}</option></select>
+        </div>
+
+        <!-- Chip Filter Klasifikasi Aktif -->
+        <div v-if="fLetterClass !== 'ALL'" class="flex flex-wrap gap-2 items-center">
+          <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl shadow-sm">
+            <i class="fa-solid fa-filter"></i>
+            Filter Klasifikasi: <b>{{ fLetterClass }}</b>
+            <button @click="fLetterClass = 'ALL'; resetPage('letters')" class="ml-1 text-red-400 hover:text-red-800 transition-colors" title="Hapus filter klasifikasi">
+              <i class="fa-solid fa-circle-xmark"></i>
+            </button>
+          </span>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <template v-for="(v, k) in LETTER_STATUS"><button v-if="countLetterStatus(k)" :key="k" @click="fLetterStatus = fLetterStatus === k ? 'ALL' : k; resetPage('letters')" :class="[v.cls, fLetterStatus === k ? 'ring-2 ring-emerald-800 scale-105 shadow-md' : 'hover:scale-105 opacity-80 hover:opacity-100']" class="px-3.5 py-1.5 rounded-full text-[11px] font-bold ring-1 transition-all duration-200">{{ v.label }}: {{ countLetterStatus(k) }}</button></template>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm min-w-[1200px]">
+              <thead>
+                <tr class="bg-slate-50/80 text-slate-500 border-b border-slate-200 font-semibold text-[11px] uppercase tracking-widest">
+                  <th class="p-4 pl-6 w-[90px]">Tanggal</th>
+                  <th class="p-4 w-[80px]">Waktu</th>
+                  <th class="p-4 w-[100px]">Jenis Kegiatan</th>
+                  <th class="p-4 w-[32%]">Nama Kegiatan</th>
+                  <th class="p-4 w-[28%]">Lokasi</th>
+                  <th class="p-4 w-[170px]">Petugas</th>
+                  <th class="p-4 w-[120px]">Status</th>
+                  <th class="p-4 text-right pr-6 w-[110px]">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-if="!filteredLetters.length"><td colspan="8" class="text-center py-12 text-slate-400"><i class="fa-regular fa-folder-open text-4xl mb-3 block opacity-50"></i>Tidak ada ST yang cocok dengan filter.</td></tr>
+                <tr v-for="st in paginatedLetters" :key="st.id" class="hover:bg-emerald-50/30 transition-colors group align-top">
+                  
+                  <!-- Tanggal -->
+                  <td class="p-4 pl-6 whitespace-nowrap">
+                    <p class="font-bold text-[13px] text-slate-800"><i class="fa-regular fa-calendar text-emerald-500 mr-1.5"></i>{{ fmtDate(st.startDate) }}</p>
+                    <p v-if="st.endDate && st.endDate !== st.startDate" class="text-[11px] text-slate-500 pl-6">s.d. {{ fmtDate(st.endDate) }}</p>
+                    <p v-if="st.letterDate" class="text-[10px] text-slate-400 pl-6">Tgl surat: {{ fmtDate(st.letterDate) }}</p>
+                  </td>
+
+                  <!-- Waktu -->
+                  <td class="p-4 whitespace-nowrap">
+                    <p class="font-semibold text-[13px] text-slate-700"><i class="fa-regular fa-clock text-slate-400 mr-1.5"></i>{{ st.startTime || '--:--' }} — {{ st.endTime || '--:--' }}</p>
+                    <p class="text-[10px] text-slate-400 pl-6">WIB</p>
+                  </td>
+
+                  <!-- Jenis Kegiatan -->
+                  <td class="p-4">
+                    <span class="px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-200 text-[11px] rounded-lg font-bold inline-block break-words">{{ st.activityName }}</span>
+                    <p class="mt-1.5"><span :class="st.classification === 'TERBATAS' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-sky-50 text-sky-600 border-sky-200'" class="px-2 py-0.5 rounded-md font-bold border text-[10px]">{{ st.classification }}</span></p>
+                  </td>
+
+                  <!-- Nama Kegiatan -->
+                  <td class="p-4">
+                    <p class="font-bold leading-snug text-slate-800 group-hover:text-emerald-700 transition-colors cursor-pointer break-words" @click="detailLetter = st">{{ st.title }}</p>
+                    <p class="text-[11px] text-slate-400 font-mono mt-1">{{ st.code }} · {{ st.officialNumber || st.draftNumber }}</p>
+                    <p v-if="st.status === 'REJECTED' && st.approvalNote" class="text-[11px] text-red-600 mt-1 bg-red-50 p-1.5 rounded border border-red-100"><i class="fa-solid fa-circle-info mr-1"></i>{{ st.approvalNote }}</p>
+                  </td>
+
+                  <!-- Lokasi -->
+                  <td class="p-4 text-xs">
+                    <p class="font-semibold text-slate-800 flex items-start gap-1.5"><i class="fa-solid fa-location-dot mt-0.5 text-emerald-500 shrink-0"></i> <span class="leading-snug break-words">{{ st.locationName || '-' }}</span></p>
+                    <p class="text-[11px] text-slate-500 mt-1 pl-[18px] break-words"><i class="fa-solid fa-house-chimney text-slate-300 text-[9px] mr-1"></i>{{ st.village || '-' }}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5 pl-[18px] font-mono break-words">{{ st.location || '-' }}</p>
+                  </td>
+
+                  <!-- Petugas -->
+                  <td class="p-4 text-xs">
+                    <template v-if="st.personnel.length">
+                      <p class="font-bold text-slate-700 truncate">{{ st.teamLeader }} <span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] font-extrabold uppercase ml-1 border border-amber-200">Ketua</span></p>
+                      <p v-for="p in st.personnel.filter(x => x.name !== st.teamLeader).slice(0, 2)" :key="p.name" class="text-slate-500 mt-0.5 truncate"><i class="fa-solid fa-user text-slate-300 text-[10px] mr-1"></i>{{ p.name }}</p>
+                      <p v-if="st.personnel.length > 3" class="text-slate-400 mt-0.5 pl-3">+{{ st.personnel.length - 3 }} lainnya</p>
+                      <p class="text-[10px] text-slate-400 mt-1.5"><i class="fa-solid fa-users"></i> {{ st.personnel.length }} petugas</p>
+                    </template>
+                    <span v-else class="text-slate-400 italic">Belum ada petugas</span>
+                  </td>
+
+                  <!-- Status -->
+                  <td class="p-4">
+                    <span :class="(LETTER_STATUS[st.status] || {}).cls" class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold ring-1 shadow-sm whitespace-nowrap">{{ (LETTER_STATUS[st.status] || {}).label || st.status }}</span>
+                  </td>
+
+                  <!-- Aksi -->
+                  <td class="p-4 pr-6">
+                    <div class="flex justify-end gap-1.5 flex-wrap">
+                      <button @click="detailLetter = st" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors" title="Detail"><i class="fa-regular fa-eye"></i></button>
+                      <button v-if="st.status === 'PENDING_APPROVAL' && role === 'PIMPINAN'" @click="openNote('approveLetter', st.id, 'Setujui & Terbitkan ' + st.code, false)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors" title="Setujui & Terbitkan"><i class="fa-solid fa-stamp"></i></button>
+                      <button v-if="(st.status === 'READY_TO_ISSUE' || (st.status === 'DRAFT' && role === 'PIMPINAN')) && canIssueLetter" @click="issueLetter(st)" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold rounded-lg shadow-sm transition-colors" title="Terbitkan"><i class="fa-solid fa-file-circle-check"></i></button>
+                      <button v-if="['DRAFT','REJECTED'].includes(st.status) && canCreateLetter" @click="openEditLetter(st)" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg transition-colors border border-blue-200" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Paginasi ST -->
+          <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/30 gap-4">
+            <span class="text-[11px] text-slate-500">
+              Menampilkan <b>{{ Math.min((currentPage.letters - 1) * itemsPerPage + 1, filteredLetters.length) }}</b> - <b>{{ Math.min(currentPage.letters * itemsPerPage, filteredLetters.length) }}</b> dari <b>{{ filteredLetters.length }}</b> data
+            </span>
+            <div class="flex gap-1 flex-wrap">
+              <button @click="currentPage.letters = Math.max(1, currentPage.letters - 1)" :disabled="currentPage.letters === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Prev</button>
+              <button v-for="p in totalLetterPages" :key="p" @click="currentPage.letters = p" :class="currentPage.letters === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors">{{ p }}</button>
+              <button @click="currentPage.letters = Math.min(totalLetterPages, currentPage.letters + 1)" :disabled="currentPage.letters === totalLetterPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            </div>
+          </div>
+        </div>
+      </section>
