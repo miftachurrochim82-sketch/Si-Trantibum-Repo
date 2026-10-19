@@ -1,0 +1,36 @@
+      <!-- ============ REKAP ============ -->
+      <section v-if="tab === 'rekap'" class="space-y-6 animate-fade-up">
+        <div><h2 class="text-2xl font-extrabold text-slate-800">Rekapitulasi &amp; Statistik Kinerja</h2><p class="text-sm text-slate-500">Dihitung real-time dari seluruh dokumen di Spreadsheet.</p></div>
+        
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-gradient-to-br from-white to-sky-50 p-5 rounded-2xl border border-sky-100 shadow-sm hover:shadow-md transition-shadow"><div class="w-10 h-10 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center mb-3"><i class="fa-solid fa-arrow-trend-up text-lg"></i></div><p class="text-3xl font-black text-slate-800">{{ stats.letters ? Math.round(stats.issued / stats.letters * 100) + '%' : '0%' }}</p><p class="text-xs font-bold mt-1 text-slate-600 uppercase tracking-wider">Penerbitan ST</p><p class="text-[10px] text-slate-500 mt-0.5">{{ stats.issued }} dari {{ stats.letters }} terbit</p></div>
+          <div class="bg-gradient-to-br from-white to-emerald-50 p-5 rounded-2xl border border-emerald-100 shadow-sm hover:shadow-md transition-shadow"><div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3"><i class="fa-solid fa-clipboard-check text-lg"></i></div><p class="text-3xl font-black text-slate-800">{{ stats.verified }}</p><p class="text-xs font-bold mt-1 text-slate-600 uppercase tracking-wider">Laporan Verifikasi</p><p class="text-[10px] text-slate-500 mt-0.5">dari {{ stats.reports }} masuk</p></div>
+          <div class="bg-gradient-to-br from-white to-amber-50 p-5 rounded-2xl border border-amber-100 shadow-sm hover:shadow-md transition-shadow"><div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mb-3"><i class="fa-solid fa-gavel text-lg"></i></div><p class="text-3xl font-black text-slate-800">{{ stats.violators }}</p><p class="text-xs font-bold mt-1 text-slate-600 uppercase tracking-wider">Total Temuan</p><p class="text-[10px] text-slate-500 mt-0.5">tercatat dari lapangan</p></div>
+          <div class="bg-gradient-to-br from-white to-violet-50 p-5 rounded-2xl border border-violet-100 shadow-sm hover:shadow-md transition-shadow"><div class="w-10 h-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3"><i class="fa-solid fa-list-check text-lg"></i></div><p class="text-3xl font-black text-slate-800">{{ data.followUps.length ? Math.round(data.followUps.filter(f => f.status === 'SELESAI').length / data.followUps.length * 100) + '%' : '—' }}</p><p class="text-xs font-bold mt-1 text-slate-600 uppercase tracking-wider">TL Selesai</p><p class="text-[10px] text-slate-500 mt-0.5">{{ data.followUps.filter(f => f.status === 'SELESAI').length }} dari {{ data.followUps.length }} tuntas</p></div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div class="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
+            <h3 class="font-bold text-sm mb-5 flex items-center gap-2"><i class="fa-solid fa-table-list text-emerald-600"></i> Rekap per Jenis Kegiatan</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm"><thead><tr class="text-left text-[10px] uppercase text-slate-400 border-b tracking-widest"><th class="py-2 pl-2">Kegiatan</th><th class="py-2 text-center">Kelas</th><th class="py-2 text-right pr-2">ST</th><th class="py-2 text-right pr-2">LP</th></tr></thead>
+              <tbody class="divide-y divide-slate-100"><tr v-for="a in data.activityTypes" :key="a.code" class="hover:bg-slate-50 transition-colors"><td class="py-3 pl-2 font-bold text-xs text-slate-700">{{ a.name }}<span class="block font-mono text-[10px] text-slate-400 font-normal mt-0.5">{{ a.stCode }}</span></td><td class="py-3 text-center"><span :class="a.classification === 'TERBATAS' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-sky-50 text-sky-600 border-sky-200'" class="px-2 py-0.5 rounded text-[9px] font-bold border">{{ a.classification }}</span></td><td class="py-3 text-right pr-2 font-black text-slate-800">{{ countLettersByAct(a.code) }}</td><td class="py-3 text-right pr-2 font-black text-slate-800">{{ data.reports.filter(r => r.activityCode === a.code).length }}</td></tr></tbody></table>
+            </div>
+          </div>
+          <div class="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
+            <h3 class="font-bold text-sm mb-5 flex items-center gap-2"><i class="fa-solid fa-map-location-dot text-emerald-600"></i> Rekap per Wilayah (Kecamatan)</h3>
+            <div class="space-y-3 max-h-[360px] overflow-y-auto pr-2 custom-scrollbar">
+              <div v-for="r in regionsByLetters" :key="r.code">
+                <div class="flex justify-between text-[11px] mb-1.5 items-center"><span class="font-bold text-slate-700">{{ r.name }} <span :class="r.risk === 'Tinggi' ? 'bg-red-100 text-red-700' : r.risk === 'Sedang' ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'" class="ml-1.5 px-2 py-0.5 rounded text-[9px] font-extrabold tracking-wide">{{ r.risk }}</span></span><b class="text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">{{ data.letters.filter(l => l.location === r.name).length }} ST</b></div>
+                <div class="h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner"><div class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-1000" :style="{ width: barPct(data.letters.filter(l => l.location === r.name).length, maxRegionCount) + '%' }"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
+          <h3 class="font-bold text-sm mb-4 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-amber-500"></i> ST Terbit Tanpa Laporan</h3>
+          <p v-if="!lettersWithoutReport.length" class="text-center py-8 text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-100 font-semibold"><i class="fa-solid fa-check-circle text-xl mb-2"></i><br>Seluruh ST terbit sudah memiliki laporan.</p>
+          <div v-else class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden"><div v-for="l in lettersWithoutReport" :key="l.id" class="p-3 bg-white hover:bg-slate-50 transition-colors flex flex-wrap items-center gap-3"><div class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-file-lines"></i></div><div class="flex-1 min-w-[220px]"><p class="text-xs font-bold text-slate-800">{{ l.code }} — {{ l.title }}</p><p class="text-[10px] text-slate-500 mt-0.5">{{ l.officialNumber }} · {{ fmtDate(l.startDate) }} · Ketua: {{ l.teamLeader }}</p></div><button @click="tab='reports'; openNewReport()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 text-[11px] font-bold rounded-lg shadow-sm transition-colors"><i class="fa-solid fa-plus mr-1"></i> Laporan</button></div></div>
+        </div>
+      </section>
