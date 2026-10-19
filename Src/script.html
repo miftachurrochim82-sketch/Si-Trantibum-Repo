@@ -1,0 +1,592 @@
+<script>
+const { createApp, ref, computed, onMounted } = Vue;
+
+// ==========================================
+// KONSTANTA GLOBAL
+// ==========================================
+const ROLES = ["ADMIN", "KOORDINATOR", "PETUGAS", "PIMPINAN"];
+const UNITS = ["Seksi Operasional dan Pengendalian", "Seksi Ketertiban Umum dan Ketentraman", "Seksi Penegakan Peraturan Perundang-undangan", "Bidang Linmas dan Pemadam Kebakaran", "Sekretariat"];
+
+const LETTER_STATUS = {
+  DRAFT: { label: "Draf", cls: "bg-slate-100 text-slate-700 ring-slate-200" },
+  PENDING_APPROVAL: { label: "Menunggu Persetujuan", cls: "bg-amber-100 text-amber-800 ring-amber-200" },
+  REJECTED: { label: "Ditolak / Revisi", cls: "bg-red-100 text-red-700 ring-red-200" },
+  READY_TO_ISSUE: { label: "Siap Diterbitkan", cls: "bg-sky-100 text-sky-800 ring-sky-200" },
+  ISSUED: { label: "Terbit (Issued)", cls: "bg-emerald-100 text-emerald-800 ring-emerald-200" },
+  CANCELLED: { label: "Dibatalkan", cls: "bg-zinc-200 text-zinc-600 ring-zinc-300" },
+  COMPLETED: { label: "Selesai Dilaksanakan", cls: "bg-teal-100 text-teal-800 ring-teal-200" },
+};
+
+const REPORT_STATUS = {
+  DRAFT: { label: "Draf", cls: "bg-slate-100 text-slate-700 ring-slate-200" },
+  SUBMITTED: { label: "Menunggu Verifikasi", cls: "bg-amber-100 text-amber-800 ring-amber-200" },
+  VERIFIED: { label: "Terverifikasi", cls: "bg-emerald-100 text-emerald-800 ring-emerald-200" },
+  RETURNED: { label: "Dikembalikan / Revisi", cls: "bg-red-100 text-red-700 ring-red-200" },
+  CLOSED: { label: "Ditutup", cls: "bg-teal-100 text-teal-800 ring-teal-200" },
+};
+
+const SPEC_LABELS = { route: "Rute / Titik Pos / Objek", targetAudience: "Target Sasaran", materialTopic: "Materi Penyuluhan", threatIssue: "Isu / Potensi Kerawanan", riskLevel: "Tingkat Risiko", perdaRef: "Dasar Perda", objectTarget: "Objek Ditertibkan", massEstimate: "Estimasi Massa", tacticalGear: "Peralatan Dalmas" };
+const ACTION_OPTIONS = ["Pembinaan / himbauan", "Teguran lisan", "Teguran tertulis", "Surat pernyataan", "Penyitaan sarana/barang bukti", "Pembongkaran", "Penyegelan sementara", "Diserahkan ke PPNS / instansi terkait", "Nihil — situasi kondusif"];
+
+const FORM_TEMPLATES = {
+  PATROLI: [
+    { key: "violatorCount", label: "Jumlah Pelanggar / Temuan", type: "number", min: 0 },
+    { key: "violationRef", label: "Acuan Perda", type: "select_perda" },
+    { key: "actionTaken", label: "Tindakan Diambil", type: "select_action" }
+  ],
+  PENERTIBAN: [
+    { key: "violatorCount", label: "Jumlah Pelanggar", type: "number", min: 0 },
+    { key: "objectTarget", label: "Objek yang Ditertibkan", type: "text", placeholder: "Contoh: 15 PKL, 3 Reklame" },
+    { key: "violationRef", label: "Acuan Perda", type: "select_perda" },
+    { key: "actionTaken", label: "Tindakan Diambil", type: "select_action" }
+  ],
+  PENGAMANAN: [
+    { key: "massEstimate", label: "Estimasi Massa", type: "text", placeholder: "± 500 Orang" },
+    { key: "violatorCount", label: "Jumlah Temuan / Insiden", type: "number", min: 0 },
+    { key: "actionTaken", label: "Tindakan Pengamanan", type: "text", placeholder: "Sterilisasi area, pengalihan arus..." }
+  ],
+  PEMBINAAN_PENYULUHAN: [
+    { key: "targetAudience", label: "Target / Jumlah Peserta", type: "text", placeholder: "50 Pedagang Pasar" },
+    { key: "materialTopic", label: "Materi yang Disampaikan", type: "text", placeholder: "Sosialisasi Perda Ketertiban" }
+  ]
+};
+
+function fmtDate(s) { 
+  if (!s) return "-"; 
+  const d = new Date(String(s).length <= 10 ? s + "T00:00:00" : s); 
+  return isNaN(d) ? s : d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }); 
+}
+function fmtDateTime(s) { 
+  if (!s) return "-"; 
+  const d = new Date(s); 
+  return isNaN(d) ? s : d.toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); 
+}
+function genOfficial() { 
+  return "800/" + (100 + Math.floor(Math.random() * 800)) + "/406.02/" + new Date().getFullYear(); 
+}
+
+createApp({
+  setup() {
+    // ----- STATE GLOBAL -----
+    const data = ref(null); 
+    const loading = ref(true); 
+    const loadError = ref("");
+    const role = ref("ADMIN"); 
+    const tab = ref("dashboard"); 
+    const adminSub = ref("users");
+    const sidebarCollapsed = ref(false);
+    
+    try { 
+      if (localStorage.getItem("si-trantibum-sidebar") === "collapsed") sidebarCollapsed.value = true; 
+    } catch (e) {}
+
+    const flash = ref({ text: "", type: "success" }); 
+    const busy = ref(false);
+    const isUploading = ref(false);
+
+    // ----- STATE FILTER & PENCARIAN -----
+    const qLetter = ref(""), fLetterStatus = ref("ALL"), fLetterAct = ref("ALL");
+    const fLetterClass = ref("ALL"); 
+    const qReport = ref(""), fReportStatus = ref("ALL"), fFuStatus = ref("ALL"), qMaster = ref("");
+    
+    const d = new Date();
+    const filterYear = ref(d.getFullYear());
+    const filterMonth = ref(d.getMonth() + 1);
+    const monthsList = [{val: 1, label: 'Januari'}, {val: 2, label: 'Februari'}, {val: 3, label: 'Maret'}, {val: 4, label: 'April'}, {val: 5, label: 'Mei'}, {val: 6, label: 'Juni'}, {val: 7, label: 'Juli'}, {val: 8, label: 'Agustus'}, {val: 9, label: 'September'}, {val: 10, label: 'Oktober'}, {val: 11, label: 'November'}, {val: 12, label: 'Desember'}];
+    const yearsList = computed(() => { const cy = new Date().getFullYear(); return [cy - 1, cy, cy + 1]; });
+
+    const currentPage = ref({ letters: 1, reports: 1, fu: 1, master: 1, audit: 1 });
+    const itemsPerPage = 25;
+    function resetPage(tab) { currentPage.value[tab] = 1; }
+
+    // ----- STATE MODAL & DETAIL -----
+    const detailLetter = ref(null), detailReport = ref(null);
+    const letterForm = ref(null), editingLetterId = ref(null), showExtra = ref(false), petugasQuery = ref(""), manualPetugas = ref("");
+    const reportForm = ref(null), editingReportId = ref(null);
+    const fuForm = ref(null), editingFuId = ref(null);
+    const noteAction = ref(null), noteText = ref("");
+    const masterForm = ref(null), confirmDel = ref(null);
+
+    // ----- FUNGSI UI & GAS BRIDGE -----
+    function showFlash(text, type) { 
+      flash.value = { text, type: type || "success" }; 
+      setTimeout(() => { if (flash.value.text === text) flash.value.text = ""; }, 4000); 
+    }
+    function toggleSidebar() { 
+      sidebarCollapsed.value = !sidebarCollapsed.value; 
+      try { localStorage.setItem("si-trantibum-sidebar", sidebarCollapsed.value ? "collapsed" : "expanded"); } catch (e) {} 
+    }
+    function runGas(fn) {
+      const args = Array.prototype.slice.call(arguments, 1);
+      return new Promise((resolve, reject) => {
+        if (!window.google || !google.script || !google.script.run) {
+          return reject(new Error("Halaman ini harus dibuka melalui URL Web App Google Apps Script."));
+        }
+        google.script.run.withSuccessHandler(resolve).withFailureHandler((err) => reject(new Error(err && err.message ? err.message : "Gagal memanggil server")))[fn].apply(null, args);
+      });
+    }
+    async function refresh() {
+      try { data.value = await runGas("apiBootstrap"); loadError.value = ""; } 
+      catch (e) { loadError.value = e.message; } 
+      finally { loading.value = false; }
+    }
+    async function api(fn) {
+      busy.value = true;
+      try { const res = await runGas.apply(null, arguments); await refresh(); return res; } 
+      catch (e) { showFlash(e.message, "error"); return null; } 
+      finally { busy.value = false; }
+    }
+    onMounted(() => {
+      const pre = document.getElementById('preloader');
+      if (pre) { pre.style.opacity = '0'; setTimeout(() => { if (pre.parentNode) pre.parentNode.removeChild(pre); }, 350); }
+      refresh();
+    });
+
+    // ----- COMPUTED PROPERTIES -----
+    const currentUser = computed(() => data.value ? (data.value.users.find(u => u.role === role.value) || data.value.users[0]) : null);
+    const actor = computed(() => ({ actorName: currentUser.value ? currentUser.value.name : "", actorRole: role.value }));
+    const canCreateLetter = computed(() => ["ADMIN", "KOORDINATOR", "PIMPINAN"].includes(role.value));
+    const canIssueLetter = canCreateLetter;
+    const activeFormFields = computed(() => {
+      if (!reportForm.value || !reportForm.value.activityCode) return FORM_TEMPLATES.PATROLI;
+      return FORM_TEMPLATES[reportForm.value.activityCode] || FORM_TEMPLATES.PATROLI;
+    });
+
+    const stats = computed(() => {
+      if (!data.value) return { letters: 0, pendingLetters: 0, issued: 0, reports: 0, pendingReports: 0, verified: 0, restricted: 0, activeFu: 0, overdueFu: 0, violators: 0 };
+      const d = data.value;
+      return {
+        letters: d.letters.length, pendingLetters: d.letters.filter(l => l.status === "PENDING_APPROVAL").length,
+        issued: d.letters.filter(l => l.status === "ISSUED").length, reports: d.reports.length,
+        pendingReports: d.reports.filter(r => r.status === "SUBMITTED").length,
+        verified: d.reports.filter(r => r.status === "VERIFIED" || r.status === "CLOSED").length,
+        restricted: d.letters.filter(l => l.classification === "TERBATAS").length,
+        activeFu: d.followUps.filter(f => f.status !== "SELESAI").length,
+        overdueFu: d.followUps.filter(f => isOverdue(f)).length,
+        violators: d.reports.reduce((a, r) => a + (Number(r.violatorCount) || 0), 0),
+      };
+    });
+
+    const navItems = computed(() => [
+      { key: "dashboard", label: "Dashboard & Aksi", short: "Home", icon: "fa-solid fa-chart-pie", badge: 0 },
+      { key: "letters", label: "Surat Tugas (ST)", short: "ST", icon: "fa-solid fa-file-lines", badge: stats.value.pendingLetters },
+      { key: "reports", label: "Laporan Kegiatan", short: "Laporan", icon: "fa-solid fa-clipboard-check", badge: stats.value.pendingReports },
+      { key: "followups", label: "Tindak Lanjut", short: "Tindak", icon: "fa-solid fa-list-check", badge: stats.value.overdueFu },
+      { key: "rekap", label: "Rekap & Statistik", short: "Rekap", icon: "fa-solid fa-chart-column", badge: 0 },
+    ]);
+
+    const workflowSteps = ["1. Koordinator / Pimpinan menyusun ST", "2. Pimpinan menyetujui = langsung terbit nomor resmi", "3. Petugas melapor hasil lapangan", "4. Koordinator memverifikasi laporan", "5. Tindak lanjut ditugaskan ke PIC"];
+
+    function isOverdue(f) { if (!f.deadline || f.status === "SELESAI") return false; const t = new Date(); t.setHours(0,0,0,0); return new Date(f.deadline + "T00:00:00") < t; }
+    function countLettersByAct(code) { return data.value ? data.value.letters.filter(l => l.activityCode === code).length : 0; }
+    function countLetterStatus(k) { return data.value ? data.value.letters.filter(l => l.status === k).length : 0; }
+    function barPct(v, max) { return Math.round((v / Math.max(1, max)) * 100); }
+    
+    const maxActCount = computed(() => data.value ? Math.max(1, ...data.value.activityTypes.map(a => countLettersByAct(a.code))) : 1);
+    const maxRegionCount = computed(() => data.value ? Math.max(1, ...data.value.regions.map(r => data.value.letters.filter(l => l.location === r.name).length)) : 1);
+    const regionsByLetters = computed(() => data.value ? [...data.value.regions].sort((a, b) => data.value.letters.filter(l => l.location === b.name).length - data.value.letters.filter(l => l.location === a.name).length) : []);
+    const upcomingLetters = computed(() => data.value ? [...data.value.letters].filter(l => l.status !== "CANCELLED").sort((a, b) => String(a.startDate).localeCompare(String(b.startDate))).slice(0, 6) : []);
+    const lettersWithoutReport = computed(() => data.value ? data.value.letters.filter(l => l.status === "ISSUED" && !data.value.reports.some(r => r.letterId === l.id)) : []);
+    const issuedLetters = computed(() => data.value ? data.value.letters.filter(l => ["ISSUED", "COMPLETED"].includes(l.status)) : []);
+    
+    function dayOf(s) { return new Date(s + "T00:00:00").getDate(); }
+    function monthOf(s) { return new Date(s + "T00:00:00").toLocaleDateString("id-ID", { month: "short" }); }
+
+    const pendingActions = computed(() => {
+      if (!data.value) return [];
+      const d = data.value, items = [];
+      if (["PIMPINAN", "ADMIN"].includes(role.value)) d.letters.filter(l => l.status === "PENDING_APPROVAL").forEach(l => items.push({ key: l.id, type: "Setujui & Terbitkan ST", title: l.code + " — " + l.title, status: "Persetujuan Pimpinan langsung menerbitkan nomor resmi", go: () => { tab.value = "letters"; detailLetter.value = l; } }));
+      if (["KOORDINATOR", "PIMPINAN", "ADMIN"].includes(role.value)) {
+        d.letters.filter(l => l.status === "DRAFT").forEach(l => items.push({ key: l.id, type: "Draf ST", title: l.code + " — " + l.title, status: role.value === "PIMPINAN" ? "Dapat diterbitkan langsung" : "Belum diajukan ke Pimpinan", go: () => { tab.value = "letters"; detailLetter.value = l; } }));
+        d.letters.filter(l => l.status === "REJECTED").forEach(l => items.push({ key: l.id, type: "ST Perlu Revisi", title: l.code + " — " + l.title, status: "Dikembalikan Pimpinan untuk direvisi", go: () => { tab.value = "letters"; detailLetter.value = l; } }));
+      }
+      if (["KOORDINATOR", "ADMIN"].includes(role.value)) d.reports.filter(r => r.status === "SUBMITTED").forEach(r => items.push({ key: r.id, type: "Verifikasi Laporan", title: r.code + " — " + r.activityName, status: "Menunggu verifikasi koordinator", go: () => { tab.value = "reports"; detailReport.value = r; } }));
+      if (["PETUGAS", "KOORDINATOR", "ADMIN"].includes(role.value)) lettersWithoutReport.value.forEach(l => items.push({ key: l.id, type: "Belum Ada Laporan", title: l.code + " — " + l.title, status: "ST terbit, laporan belum dibuat", go: () => { tab.value = "reports"; openNewReport(); } }));
+      d.followUps.filter(f => isOverdue(f)).forEach(f => items.push({ key: f.id, type: "Tindak Lanjut Terlambat", title: f.code + " — " + String(f.actionRequired || "").slice(0, 70), status: "Lewat tenggat " + fmtDate(f.deadline), go: () => { tab.value = "followups"; } }));
+      return items.slice(0, 8);
+    });
+
+    const filteredLetters = computed(() => !data.value ? [] : data.value.letters.filter(l => {
+      const dateStr = String(l.startDate || l.letterDate || '');
+      const parts = dateStr.split('T')[0].split('-');
+      if (parts.length !== 3) {
+        return (filterMonth.value === 0 && filterYear.value === 0) && (fLetterStatus.value === "ALL" || l.status === fLetterStatus.value) && (fLetterAct.value === "ALL" || l.activityCode === fLetterAct.value) && (fLetterClass.value === "ALL" || l.classification === fLetterClass.value) && (l.code + " " + l.title + " " + (l.officialNumber || "") + " " + l.location + " " + l.teamLeader).toLowerCase().includes(qLetter.value.toLowerCase());
+      }
+      const y = Number(parts[0]), m = Number(parts[1]);
+      return (filterYear.value === 0 || y === filterYear.value) && (filterMonth.value === 0 || m === filterMonth.value) && (fLetterStatus.value === "ALL" || l.status === fLetterStatus.value) && (fLetterAct.value === "ALL" || l.activityCode === fLetterAct.value) && (fLetterClass.value === "ALL" || l.classification === fLetterClass.value) && (l.code + " " + l.title + " " + (l.officialNumber || "") + " " + l.location + " " + l.teamLeader).toLowerCase().includes(qLetter.value.toLowerCase());
+    }));
+    const paginatedLetters = computed(() => filteredLetters.value.slice((currentPage.value.letters - 1) * itemsPerPage, currentPage.value.letters * itemsPerPage));
+    const totalLetterPages = computed(() => Math.ceil(filteredLetters.value.length / itemsPerPage) || 1);
+
+    const filteredReports = computed(() => !data.value ? [] : data.value.reports.filter(r => {
+      const dateStr = String(r.actualTime || r.createdAt || '');
+      const parts = dateStr.split('T')[0].split('-');
+      if (parts.length !== 3) {
+        return (filterMonth.value === 0 && filterYear.value === 0) && (fReportStatus.value === "ALL" || r.status === fReportStatus.value) && (r.code + " " + r.stNumber + " " + r.activityName + " " + r.description + " " + r.actualLocation).toLowerCase().includes(qReport.value.toLowerCase());
+      }
+      const y = Number(parts[0]), m = Number(parts[1]);
+      return (filterYear.value === 0 || y === filterYear.value) && (filterMonth.value === 0 || m === filterMonth.value) && (fReportStatus.value === "ALL" || r.status === fReportStatus.value) && (r.code + " " + r.stNumber + " " + r.activityName + " " + r.description + " " + r.actualLocation).toLowerCase().includes(qReport.value.toLowerCase());
+    }));
+    const paginatedReports = computed(() => filteredReports.value.slice((currentPage.value.reports - 1) * itemsPerPage, currentPage.value.reports * itemsPerPage));
+    const totalReportPages = computed(() => Math.ceil(filteredReports.value.length / itemsPerPage) || 1);
+
+    const filteredFu = computed(() => !data.value ? [] : data.value.followUps.filter(f => fFuStatus.value === "ALL" || (fFuStatus.value === "OVERDUE" ? isOverdue(f) : f.status === fFuStatus.value)));
+    const paginatedFu = computed(() => filteredFu.value.slice((currentPage.value.fu - 1) * itemsPerPage, currentPage.value.fu * itemsPerPage));
+    const totalFuPages = computed(() => Math.ceil(filteredFu.value.length / itemsPerPage) || 1);
+
+    const masterRows = computed(() => !data.value ? [] : (data.value[adminSub.value] || []).filter(r => JSON.stringify(r).toLowerCase().includes(qMaster.value.toLowerCase())));
+    const paginatedMaster = computed(() => masterRows.value.slice((currentPage.value.master - 1) * itemsPerPage, currentPage.value.master * itemsPerPage));
+    const totalMasterPages = computed(() => Math.ceil(masterRows.value.length / itemsPerPage) || 1);
+
+    const paginatedAuditLogs = computed(() => data.value ? data.value.auditLogs.slice((currentPage.value.audit - 1) * itemsPerPage, currentPage.value.audit * itemsPerPage) : []);
+    const totalAuditPages = computed(() => data.value ? Math.ceil(data.value.auditLogs.length / itemsPerPage) || 1 : 1);
+
+    function switchRole() { 
+      showFlash("Beralih ke role " + role.value + (currentUser.value ? " — " + currentUser.value.name : "") + "."); 
+      if (role.value !== "ADMIN" && tab.value === "admin") tab.value = "dashboard"; 
+      currentPage.value = { letters: 1, reports: 1, fu: 1, master: 1, audit: 1 };
+      fLetterClass.value = "ALL";
+    }
+
+    const actOfForm = computed(() => letterForm.value && data.value ? data.value.activityTypes.find(a => a.code === letterForm.value.activityCode) : null);
+    const villageOptions = computed(() => { if (!letterForm.value || !data.value) return []; const reg = data.value.regions.find(r => r.name === letterForm.value.location); return reg ? data.value.villages.filter(v => v.regionCode === reg.code) : []; });
+    const presets = computed(() => {
+      if (!letterForm.value) return [];
+      const kec = (letterForm.value.location || "").replace(/^Kecamatan\s+/i, "") || "Trenggalek";
+      const name = actOfForm.value ? actOfForm.value.name : "";
+      const map = {
+        PENJAGAAN: ["Penjagaan Pendopo Kabupaten Trenggalek", "Penjagaan Kantor Bupati & Objek Vital Daerah", "Penjagaan Rumah Dinas Bupati Trenggalek", "Penjagaan Kantor Kecamatan " + kec],
+        PATROLI: ["Patroli Wilayah Kecamatan " + kec, "Patroli Malam Ketertiban Umum Kecamatan " + kec, "Patroli Kawasan Alun-alun & Pusat Keramaian", "Patroli Pengawasan PKL & Parkir Liar Kecamatan " + kec],
+        PENGAMANAN: ["Pengamanan Kegiatan Masyarakat di Kecamatan " + kec, "Pengamanan Kunjungan Kerja Pimpinan Daerah", "Pengamanan Acara Keagamaan/Budaya di Kecamatan " + kec, "Pengamanan Objek Vital & Fasilitas Umum"],
+        PEMBINAAN_PENYULUHAN: ["Pembinaan & Penyuluhan Perda kepada Pelaku Usaha/PKL Kecamatan " + kec, "Sosialisasi Ketertiban Umum di Sekolah Kecamatan " + kec, "Pembinaan Satlinmas Desa/Kelurahan Kecamatan " + kec],
+        DETEKSI_DINI_CEGAH_DINI: ["Deteksi Dini Potensi Kerawanan Trantibum di Kecamatan " + kec, "Pemetaan Kerawanan Jelang Hari Besar/Libur di Kecamatan " + kec, "Cegah Dini Gangguan Ketentraman Masyarakat Kecamatan " + kec],
+        PENERTIBAN: ["Penertiban PKL & Parkir Liar di Kecamatan " + kec, "Penertiban Reklame Tanpa Izin/Kedaluwarsa di Kecamatan " + kec, "Penertiban Bangunan & Atribut Liar di Kecamatan " + kec, "Operasi Penegakan Perda di Kecamatan " + kec],
+        PENGENDALIAN_MASSA: ["Pengendalian Massa Aksi Unjuk Rasa di Kecamatan " + kec, "Pengamanan & Pengendalian Kerumunan di Kecamatan " + kec, "Siaga Dalmas Pengendalian Massa Kab. Trenggalek"],
+      };
+      return map[letterForm.value.activityCode] || ["Kegiatan " + name + " di Kecamatan " + kec];
+    });
+    const vehicles = computed(() => data.value ? data.value.assets.filter(a => a.category.toLowerCase().includes("kendaraan")) : []);
+    const equipments = computed(() => data.value ? data.value.assets.filter(a => !a.category.toLowerCase().includes("kendaraan")) : []);
+    const candidates = computed(() => {
+      if (!data.value) return [];
+      const map = new Map();
+      data.value.users.filter(u => u.role === "PETUGAS" || u.role === "KOORDINATOR").forEach(u => {
+        const metaText = `${u.jabatan || u.role} · ${u.pangkatGol || ''} · NIP. ${u.nip}`;
+        map.set(u.name, { name: u.name, meta: metaText });
+      });
+      if (letterForm.value) letterForm.value.personnel.forEach(p => { if (p.name && !map.has(p.name)) map.set(p.name, { name: p.name, meta: "Diinput manual" }); });
+      return [...map.values()].filter(c => c.name.toLowerCase().includes(petugasQuery.value.toLowerCase()));
+    });
+
+    async function handleFileUpload(event) {
+      const files = event.target.files;
+      if (!files.length) return;
+      isUploading.value = true;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 3 * 1024 * 1024) {
+          showFlash(`File ${file.name} terlalu besar (maks 3MB).`, "error");
+          continue;
+        }
+        const base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+        try {
+          const res = await runGas("apiUploadFile", base64, file.name, file.type);
+          if (res && res.success) {
+            reportForm.value.evidenceList.push(res.url); 
+          } else {
+            showFlash("Gagal upload: " + (res ? res.error : "Unknown error"), "error");
+          }
+        } catch (err) {
+          showFlash("Error: " + err.message, "error");
+        }
+      }
+      isUploading.value = false;
+      event.target.value = ""; 
+    }
+
+    function formatDropdownLabel(l) {
+      const d = new Date(l.startDate);
+      return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')} - ${l.title}`;
+    }
+
+    function blankLetter() {
+      const today = new Date().toISOString().slice(0, 10);
+      const first = data.value.users.find(u => u.role === "PETUGAS");
+      return {
+        activityCode: "PATROLI", title: "", legalBasis: "Perda No. 3 Tahun 2019 tentang Ketertiban Umum dan Ketentraman Masyarakat.", letterDate: today,
+        startDate: today, startTime: "08:00", endDate: today, endTime: "16:00", location: data.value.regions[0] ? data.value.regions[0].name : "Kecamatan Trenggalek", village: "", locationName: "",
+        personnel: first ? [{ name: first.name, rank: first.pangkatGol || "", role: "Koordinator" }] : [], assetsUsed: [], notes: "", purpose: "", signerName: data.value.signers[0] ? data.value.signers[0].name : ""
+      };
+    }
+    function openNewLetter() { editingLetterId.value = null; showExtra.value = false; letterForm.value = blankLetter(); }
+    function openEditLetter(l) {
+      editingLetterId.value = l.id;
+      letterForm.value = {
+        activityCode: l.activityCode, title: l.title, legalBasis: l.legalBasis || "", letterDate: l.letterDate || l.startDate || "", startDate: l.startDate, startTime: l.startTime || "08:00",
+        endDate: l.endDate, endTime: l.endTime || "16:00", location: l.location, village: l.village || "", locationName: l.locationName || "",
+        personnel: JSON.parse(JSON.stringify(l.personnel || [])), assetsUsed: [...(l.assetsUsed || [])], notes: l.notes || "", purpose: l.purpose || "", signerName: l.signerName
+      };
+    }
+    
+    function isSelPetugas(name) { return letterForm.value.personnel.some(p => p.name === name); }
+    function togglePetugas(name, checked) {
+      if (!checked) { letterForm.value.personnel = letterForm.value.personnel.filter(p => p.name !== name); return; }
+      const hasKetua = letterForm.value.personnel.some(p => p.role === "Ketua Tim");
+      const u = data.value.users.find(x => x.name === name);
+      letterForm.value.personnel.push({ name, rank: (u && u.pangkatGol) ? u.pangkatGol : "", nip: (u && u.nip) ? u.nip : "", role: hasKetua ? "Anggota Regu" : "Ketua Tim" });
+    }
+    function addManualPetugas() { const n = manualPetugas.value.trim(); if (!n) return; if (isSelPetugas(n)) return showFlash("Nama petugas sudah dipilih.", "error"); togglePetugas(n, true); manualPetugas.value = ""; }
+    function toggleAsset(code, checked) { letterForm.value.assetsUsed = checked ? [...letterForm.value.assetsUsed, code] : letterForm.value.assetsUsed.filter(x => x !== code); }
+
+    async function submitLetter(mode) {
+      const f = letterForm.value; if (!f) return;
+      if (!f.title.trim() || !f.startDate) return showFlash("Baris 3 (Nama Kegiatan) dan Baris 4 (Tanggal Mulai) wajib diisi.", "error");
+      if (f.endDate && f.endDate < f.startDate) return showFlash("Tanggal Selesai tidak boleh sebelum Tanggal Mulai.", "error");
+      if (f.startDate === f.endDate && f.startTime && f.endTime && f.endTime <= f.startTime) return showFlash("Waktu Selesai harus setelah Waktu Mulai.", "error");
+      
+      if (mode !== "draft") {
+        if (!f.legalBasis.trim()) return showFlash("Dasar Surat wajib diisi.", "error");
+        if (!f.letterDate) return showFlash("Tanggal Surat wajib diisi.", "error");
+        if (!f.village.trim()) return showFlash("Pilih Desa/Kelurahan.", "error");
+        if (!f.locationName.trim()) return showFlash("Nama Lokasi spesifik wajib diisi.", "error");
+      }
+      if (mode === "direct-issue" && role.value !== "PIMPINAN") return showFlash("Penerbitan langsung hanya Pimpinan.", "error");
+      
+      const personnel = f.personnel.filter(p => p.name.trim());
+      if (!personnel.length) return showFlash("Pilih minimal 1 petugas.", "error");
+      if (!personnel.some(p => p.role === "Ketua Tim")) personnel[0].role = "Ketua Tim";
+      
+      const act = actOfForm.value || {};
+      const sig = data.value.signers.find(s => s.name === f.signerName) || {};
+      const signerUser = data.value.users.find(u => u.name === f.signerName);
+      const existing = editingLetterId.value ? data.value.letters.find(l => l.id === editingLetterId.value) : null;
+      const status = mode === "draft" ? "DRAFT" : mode === "direct-issue" ? "ISSUED" : "PENDING_APPROVAL";
+      const officialNumber = mode === "direct-issue" ? ((existing && existing.officialNumber) || genOfficial()) : undefined;
+      
+      const payload = Object.assign({
+        activityCode: f.activityCode, activityName: act.name || "", classification: act.classification || "INTERNAL",
+        title: f.title.trim(), letterDate: f.letterDate, startDate: f.startDate, startTime: f.startTime, endDate: f.endDate || f.startDate, endTime: f.endTime, 
+        location: f.location, village: f.village.trim(), locationName: f.locationName.trim(), notes: f.notes,
+        purpose: f.purpose.trim() || (f.title.trim() + " di " + (f.locationName.trim() || f.location) + "."),
+        legalBasis: f.legalBasis, personnel: personnel, teamLeader: (personnel.find(p => p.role === "Ketua Tim") || personnel[0]).name,
+        signerName: f.signerName, signerPosition: sig.position || "", signerNip: sig.nip || "", signerRank: sig.pangkatGol || (signerUser && signerUser.pangkatGol) || "",
+        assetsUsed: f.assetsUsed, status: status, createdBy: (existing && existing.createdBy) || (currentUser.value && currentUser.value.name) || "",
+      }, actor.value);
+      
+      if (officialNumber) payload.officialNumber = officialNumber;
+      if (mode === "direct-issue") payload.approvalNote = "Diterbitkan langsung oleh Pimpinan.";
+      
+      const ok = editingLetterId.value
+        ? await api("apiUpdateLetter", editingLetterId.value, Object.assign({}, payload, { auditDetail: "ST direvisi (" + status + ")." }))
+        : await api("apiCreateLetter", payload);
+        
+      if (ok) { letterForm.value = null; tab.value = "letters"; showFlash("ST berhasil disimpan."); }
+    }
+
+    function openNewReport() {
+      if (!issuedLetters.value.length) return showFlash("Belum ada ST Terbit (ISSUED).", "error");
+      editingReportId.value = null;
+      const firstST = issuedLetters.value[0];
+      reportForm.value = { letterId: firstST.id, activityCode: firstST.activityCode, actualTime: new Date().toISOString().slice(0, 16), actualLocation: "", description: "", results: "", obstacles: "Nihil", recommendation: "", violationRef: "", violatorCount: 0, actionTaken: "", evidenceInput: "", evidenceList: [], objectTarget: "", massEstimate: "", targetAudience: "", materialTopic: "" };
+    }
+    function openEditReport(r) { 
+      editingReportId.value = r.id; 
+      reportForm.value = { letterId: r.letterId || "", activityCode: r.activityCode || "", actualTime: r.actualTime, actualLocation: r.actualLocation, description: r.description, results: r.results, obstacles: r.obstacles, recommendation: r.recommendation, violationRef: r.violationRef, violatorCount: r.violatorCount, actionTaken: r.actionTaken, evidenceInput: "", evidenceList: [...(r.evidenceList || [])], objectTarget: r.objectTarget || "", massEstimate: r.massEstimate || "", targetAudience: r.targetAudience || "", materialTopic: r.materialTopic || "" }; 
+    }
+    function addEvidence() { const v = reportForm.value.evidenceInput.trim(); if (!v) return; reportForm.value.evidenceList.push(v); reportForm.value.evidenceInput = ""; }
+    
+    async function submitReport(asDraft) {
+      const f = reportForm.value; if (!f) return;
+      if (!f.description.trim()) return showFlash("Uraian pelaksanaan wajib diisi.", "error");
+      
+      const st = data.value.letters.find(l => l.id === f.letterId) || (editingReportId.value ? data.value.reports.find(r => r.id === editingReportId.value) : null) || null;
+      const stObj = st && st.activityName ? st : data.value.letters.find(l => l.id === (st && st.letterId));
+      const linkedLetter = stObj || st;
+      
+      const payload = Object.assign({}, f, {
+        stNumber: linkedLetter ? (linkedLetter.officialNumber || linkedLetter.draftNumber) : "", activityName: linkedLetter ? linkedLetter.activityName : "", activityCode: linkedLetter ? linkedLetter.activityCode : "",
+        status: asDraft ? "DRAFT" : "SUBMITTED", createdBy: (currentUser.value && currentUser.value.name) || "",
+      }, actor.value);
+      delete payload.evidenceInput;
+      
+      const ok = editingReportId.value ? await api("apiUpdateReport", editingReportId.value, Object.assign({}, payload, { auditDetail: "Laporan direvisi." })) : await api("apiCreateReport", payload);
+      if (ok) { reportForm.value = null; tab.value = "reports"; showFlash(asDraft ? "Draf tersimpan." : "Laporan terkirim."); }
+    }
+    
+    async function closeReport(r) {
+      const ok = await api("apiUpdateReport", r.id, Object.assign({ action: "close", auditDetail: "Laporan ditutup." }, actor.value));
+      if (ok) { detailReport.value = null; showFlash("Laporan ditutup."); }
+    }
+
+    function openNewFu(report) {
+      editingFuId.value = null;
+      const koord = data.value.users.find(u => u.role === "KOORDINATOR");
+      fuForm.value = { reportId: report ? report.id : "", actionRequired: report ? report.recommendation : "", pic: koord ? koord.name : "", picUnit: "Seksi Operasional", deadline: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10), priority: "Sedang", progressNote: "" };
+    }
+    function addFollowUpFromDetail() { const r = detailReport.value; detailReport.value = null; openNewFu(r); }
+    function openEditFu(f) { editingFuId.value = f.id; fuForm.value = { reportId: f.reportId || "", actionRequired: f.actionRequired, pic: f.pic, picUnit: f.picUnit, deadline: f.deadline || "", priority: f.priority, progressNote: f.progressNote }; }
+    async function submitFu() {
+      const f = fuForm.value; if (!f || !f.actionRequired.trim()) return showFlash("Uraian wajib diisi.", "error");
+      const rep = data.value.reports.find(r => r.id === f.reportId);
+      const payload = Object.assign({ reportId: f.reportId, reportCode: rep ? rep.code : "", actionRequired: f.actionRequired, pic: f.pic, picUnit: f.picUnit, deadline: f.deadline || "", priority: f.priority, progressNote: f.progressNote }, actor.value);
+      const ok = editingFuId.value ? await api("apiUpdateFollowUp", editingFuId.value, payload) : await api("apiCreateFollowUp", payload);
+      if (ok) { fuForm.value = null; editingFuId.value = null; tab.value = "followups"; showFlash("TL disimpan."); }
+    }
+
+    function openNote(kind, id, title, needNote) { noteAction.value = { kind, id, title, needNote }; noteText.value = ""; }
+    async function runNoteAction() {
+      const na = noteAction.value; if (!na) return;
+      const note = noteText.value.trim(), a = actor.value, me = currentUser.value ? currentUser.value.name : "";
+      if (na.kind === "approveLetter") {
+        const letter = data.value.letters.find(l => l.id === na.id);
+        const official = (letter && letter.officialNumber) || genOfficial();
+        const ok = await api("apiUpdateLetter", na.id, Object.assign({ action: "approve", officialNumber: official, approvalNote: note || "Disetujui.", auditDetail: ("Disetujui. " + note).trim() }, a));
+        if (ok) showFlash("ST disetujui & terbit.");
+      } else if (na.kind === "rejectLetter") {
+        if (!note) return showFlash("Alasan wajib diisi.", "error");
+        const ok = await api("apiUpdateLetter", na.id, Object.assign({ action: "reject", approvalNote: note, auditDetail: "Dikembalikan: " + note }, a));
+        if (ok) showFlash("ST dikembalikan.");
+      } else if (na.kind === "verifyReport") {
+        const koord = data.value.users.find(u => u.role === "KOORDINATOR");
+        const ok = await api("apiUpdateReport", na.id, Object.assign({ action: "verify", verificationNote: note || "Terverifikasi.", pic: koord ? koord.name : me, picUnit: currentUser.value ? currentUser.value.unit : "", deadline: new Date(Date.now() + 10 * 864e5).toISOString().slice(0, 10), priority: "Sedang", auditDetail: ("Diverifikasi. " + note).trim() }, a));
+        if (ok) showFlash("Laporan terverifikasi.");
+      } else if (na.kind === "rejectReport") {
+        if (!note) return showFlash("Catatan wajib diisi.", "error");
+        const ok = await api("apiUpdateReport", na.id, Object.assign({ action: "return", verificationNote: note, auditDetail: "Dikembalikan: " + note }, a));
+        if (ok) showFlash("Laporan dikembalikan.");
+      } else if (na.kind === "completeFu") {
+        const ok = await api("apiUpdateFollowUp", na.id, Object.assign({ action: "complete", completionNote: note || "Selesai.", auditDetail: ("Diselesaikan. " + note).trim() }, a));
+        if (ok) showFlash("TL selesai.");
+      }
+      noteAction.value = null; noteText.value = ""; detailLetter.value = null; detailReport.value = null;
+    }
+    async function issueLetter(l) {
+      const official = l.officialNumber || genOfficial();
+      const ok = await api("apiUpdateLetter", l.id, Object.assign({ action: "issue", officialNumber: official, auditDetail: "Nomor diterbitkan: " + official }, actor.value));
+      if (ok) showFlash("ST terbit: " + official);
+    }
+    async function patchLetterStatus(l, status, detail, msg) {
+      const ok = await api("apiUpdateLetter", l.id, Object.assign({ status: status, auditDetail: detail }, actor.value));
+      if (ok) { showFlash(msg); detailLetter.value = null; }
+    }
+
+    const MASTER_DEFS = computed(() => ({
+      users: { label: "Pengguna & RBAC", resource: "users", columns: [{key:"name",label:"Nama & NIP"},{key:"jabatan",label:"Jabatan"},{key:"unit",label:"Unit Kerja"},{key:"role",label:"Role"},{key:"canSign",label:"can_sign"}], fields: [{name:"name",label:"Nama Lengkap",placeholder:"Nama"}, {name:"nip",label:"NIP",placeholder:"18 digit"}, {name:"pangkatGol",label:"Pangkat / Gol",options:["Juru Muda / I/a","Juru Muda Tk.I / I/b","Juru / I/c","Juru Tk.I / I/d","Pengatur Muda / II/a","Pengatur Muda Tk.I / II/b","Pengatur / II/c","Pengatur Tk.I / II/d","Penata Muda / III/a","Penata Muda Tk.I / III/b","Penata / III/c","Penata Tk.I / III/d","Pembina / IV/a","Pembina Tk.I / IV/b","Pembina Utama Muda / IV/c","Pembina Utama Madya / IV/d","Pembina Utama / IV/e"]}, {name:"jenisJabatan",label:"Jenis Jabatan",options:["Struktural", "Fungsional", "Pelaksana"]}, {name:"jabatan",label:"Jabatan"}, {name:"unit",label:"Unit Kerja",options:UNITS}, {name:"email",label:"Email",type:"email"}, {name:"noHp",label:"No HP",type:"tel"}, {name:"role",label:"Role",options:ROLES}, {name:"canSign",label:"can_sign",type:"checkbox"}] },
+      activityTypes: { label: "Jenis Kegiatan", resource: "activityTypes", columns: [{key:"code",label:"Kode"},{key:"name",label:"Nama"},{key:"classification",label:"Klasifikasi"},{key:"stCode",label:"Kode ST"},{key:"reportCode",label:"Kode Laporan"}], fields: [{name:"code",label:"Kode"},{name:"name",label:"Nama"},{name:"classification",label:"Klasifikasi",options:["INTERNAL","TERBATAS"]},{name:"stCode",label:"Prefix ST"},{name:"reportCode",label:"Prefix Laporan"},{name:"description",label:"Deskripsi",type:"textarea"}] },
+      regions: { label: "Kecamatan", resource: "regions", columns: [{key:"code",label:"Kode"},{key:"name",label:"Nama"},{key:"risk",label:"Kerawanan"}], fields: [{name:"code",label:"Kode"},{name:"name",label:"Nama"},{name:"risk",label:"Risiko",options:["Normal","Sedang","Tinggi"]}] },
+      villages: { label: "Desa/Kel", resource: "villages", columns: [{key:"code",label:"Kode"},{key:"name",label:"Nama"},{key:"regionCode",label:"Kecamatan"}], fields: [{name:"code",label:"Kode"},{name:"name",label:"Nama"},{name:"regionCode",label:"Kecamatan",options: data.value ? data.value.regions.map(r => r.code) : []}] },
+      signers: { label: "Penandatangan", resource: "signers", columns: [{key:"name",label:"Nama"},{key:"position",label:"Jabatan"},{key:"nip",label:"NIP"}], fields: [{name:"name",label:"Nama"},{name:"position",label:"Jabatan"},{name:"pangkatGol",label:"Pangkat"},{name:"nip",label:"NIP"}] },
+      violations: { label: "Perda", resource: "violations", columns: [{key:"perdaNo",label:"Perda"},{key:"article",label:"Pasal"},{key:"description",label:"Perihal"},{key:"category",label:"Kategori"},{key:"sanction",label:"Sanksi"}], fields: [{name:"code",label:"Kode"},{name:"perdaNo",label:"Nomor"},{name:"article",label:"Pasal"},{name:"description",label:"Perihal",type:"textarea"},{name:"category",label:"Kategori"},{name:"sanction",label:"Sanksi"}] },
+      assets: { label: "Aset", resource: "assets", columns: [{key:"code",label:"Kode"},{key:"name",label:"Nama"},{key:"category",label:"Kategori"},{key:"spec",label:"Spesifikasi"},{key:"condition",label:"Kondisi"}], fields: [{name:"code",label:"Kode"},{name:"name",label:"Nama"},{name:"category",label:"Kategori"},{name:"spec",label:"Spesifikasi"},{name:"condition",label:"Kondisi",options:["Baik","Perawatan","Rusak Ringan","Rusak Berat"]}] },
+      agencies: { label: "Instansi", resource: "agencies", columns: [{key:"code",label:"Kode"},{key:"name",label:"Instansi"},{key:"contact",label:"Kontak"}], fields: [{name:"code",label:"Kode"},{name:"name",label:"Nama"},{name:"contact",label:"Kontak"}] },
+    }));
+    
+    function regionName(code) { const r = data.value.regions.find(x => x.code === code); return r ? r.name : code; }
+    function badgeFor(v) { return (v === "TERBATAS" || v === "Tinggi") ? "bg-red-100 text-red-700" : v === "Sedang" ? "bg-amber-100 text-amber-700" : "bg-sky-100 text-sky-700"; }
+    
+    function openMaster(sub, row, prefill = null) {
+      const def = MASTER_DEFS.value[sub], values = {};
+      def.fields.forEach(f => { values[f.name] = f.type === "checkbox" ? !!(row && row[f.name]) : ((row && row[f.name]) !== undefined && row ? row[f.name] : (f.options ? f.options[0] : f.type === "number" ? 0 : "")); });
+      if (prefill) Object.assign(values, prefill);
+      masterForm.value = { sub, id: row ? row.id : null, values };
+    }
+    async function submitMaster() {
+      const mf = masterForm.value; if (!mf) return;
+      const def = MASTER_DEFS.value[mf.sub];
+      if (!String(mf.values.name || mf.values.perdaNo || "").trim()) return showFlash("Nama wajib diisi.", "error");
+      const ok = mf.id ? await api("apiUpdateMaster", def.resource, mf.id, mf.values) : await api("apiCreateMaster", def.resource, mf.values);
+      if (ok) { masterForm.value = null; showFlash("Master disimpan."); }
+    }
+    function confirmDeleteMaster(row) { confirmDel.value = { kind: "master", sub: adminSub.value, id: row.id, label: 'master "' + (row.name || row.perdaNo || row.code || "") + '"' }; }
+    async function runDelete() {
+      const c = confirmDel.value; if (!c) return;
+      const ok = c.kind === "letter" ? await api("apiDeleteLetter", c.id, { actorName: actor.value.actorName, actorRole: actor.value.actorRole }) : await api("apiDeleteMaster", MASTER_DEFS.value[c.sub].resource, c.id);
+      if (ok) { showFlash("Data dihapus."); confirmDel.value = null; detailLetter.value = null; }
+    }
+
+    function pipelineActive(status, i) { const mapped = status === "COMPLETED" ? "ISSUED" : status === "READY_TO_ISSUE" ? "PENDING_APPROVAL" : status; const idx = ["DRAFT", "PENDING_APPROVAL", "ISSUED"].indexOf(mapped); return idx >= i && !["REJECTED", "CANCELLED"].includes(status); }
+    function assetNames(codes, onlyVehicle) { return (codes || []).filter(c => { const a = data.value.assets.find(x => x.code === c); const veh = a ? a.category.toLowerCase().includes("kendaraan") : false; return onlyVehicle === undefined ? true : veh === onlyVehicle; }).map(c => { const a = data.value.assets.find(x => x.code === c); return a ? a.name : c; }).join(", ") || "-"; }
+    function letterDetailFields(l) { return [["Tanggal Surat", fmtDate(l.letterDate || l.startDate)], ["Jenis Kegiatan", l.activityName], ["Mulai", fmtDate(l.startDate) + (l.startTime ? " pukul " + l.startTime + " WIB" : "")], ["Selesai", fmtDate(l.endDate) + (l.endTime ? " pukul " + l.endTime + " WIB" : "")], ["Kecamatan", l.location], ["Desa / Kelurahan", l.village || "-"], ["Nama Lokasi", l.locationName || "-"], ["Penandatangan", (l.signerName || "-") + " — " + (l.signerPosition || "-")], ["Dasar Surat", l.legalBasis || "-"], ["Kendaraan", assetNames(l.assetsUsed, true)], ["Peralatan", assetNames(l.assetsUsed, false)]]; }
+    
+    function doPrint(l) {
+      const rows = (l.personnel || []).map((p, i) => `<tr>
+        <td style="border:1px solid #000; padding:4px; text-align:center; font-size:11px;">${i + 1}</td>
+        <td style="border:1px solid #000; padding:4px; font-size:11px;"><b>${p.name}</b><br><span style="font-size:9px;">NIP. ${p.nip || "-"}</span></td>
+        <td style="border:1px solid #000; padding:4px; font-size:11px; text-align:center;">${p.rank || "-"}</td>
+        <td style="border:1px solid #000; padding:4px; font-size:11px; text-align:center;">${p.role}</td>
+        <td style="border:1px solid #000; padding:4px; font-size:11px; text-align:center;">-</td>
+      </tr>`).join("");
+
+      let specificHtml = "";
+      if (l.specificData && Object.keys(l.specificData).length > 0) {
+        const keys = Object.keys(l.specificData).filter(k => l.specificData[k]);
+        if (keys.length > 0) {
+          specificHtml = `<ul style="margin:2px 0 2px 20px; padding:0;">`;
+          keys.forEach(k => { const labels = { route: "Rute/Titik", targetAudience: "Target", materialTopic: "Materi", threatIssue: "Isu", riskLevel: "Risiko", perdaRef: "Acuan Perda", objectTarget: "Objek", massEstimate: "Estimasi Massa", tacticalGear: "Peralatan Dalmas" }; specificHtml += `<li>${labels[k] || k}: ${l.specificData[k]}</li>`; });
+          specificHtml += `</ul>`;
+        }
+      }
+
+      const logoUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBkPSJNNTAgMTBhNDAgNDAgMCAwIDAgMCA4MCA0MCA0MCAwIDAgMCAwLTgwIiBmaWxsPSIjMDY0ZTNkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IndoaXRlIj5UPC90ZXh0Pjwvc3ZnPg==";
+
+      document.getElementById("print-area").innerHTML = `
+        <style>@page { size: A4 portrait; margin: 15mm 20mm; } body { font-family: 'Times New Roman', Times, serif; font-size: 11px; line-height: 1.35; color: #000; margin: 0; padding: 0; } .header-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; } .header-table td { text-align: center; vertical-align: middle; } .header-table img { width: 60px; } .header-text1 { margin: 0; font-size: 13px; font-weight: bold; letter-spacing: 1px; } .header-text2 { margin: 0; font-size: 16px; font-weight: bold; } .header-text3 { margin: 0; font-size: 10px; } .line { border-top: 2px solid #000; border-bottom: 1px solid #000; height: 2px; margin: 8px 0 12px 0; } .title { text-align: center; margin-bottom: 12px; } .title h2 { margin: 0; font-size: 15px; font-weight: bold; text-decoration: underline; } .title p { margin: 2px 0 0; font-size: 11px; } .content p { margin: 0 0 3px; text-align: justify; } .content ol { margin: 0 0 8px 20px; padding: 0; text-align: justify; } .content ul { margin: 2px 0 2px 20px; padding: 0; } .content li { margin-bottom: 2px; } .data-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; } .data-table th { border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px; } .data-table td { border: 1px solid #000; padding: 3px; font-size: 11px; } .signature-box { margin-left: auto; width: 280px; text-align: left; margin-top: 10px; } .signature-box p { margin: 0; } .signature-space { height: 50px; }</style>
+        <table class="header-table"><tr><td style="width: 15%;"><img src="${logoUrl}" alt="Logo"></td><td style="width: 85%;"><p class="header-text1">PEMERINTAH KABUPATEN TRENGGALEK</p><p class="header-text2">SATUAN POLISI PAMONG PRAJA DAN KEBAKARAN</p><p class="header-text3">Jln. Dr. Soetomo No. 4 Kelurahan Ngantru, Trenggalek</p></td></tr></table>
+        <div class="line"></div>
+        <div class="title"><h2>SURAT TUGAS</h2><p>Nomor: ${l.officialNumber || l.draftNumber || "-"}</p></div>
+        <div class="content">
+          <p style="font-weight: bold; margin-bottom: 2px;">Dasar:</p>
+          <ol><li>Permendagri No. 16 Tahun 2023 tentang Standar Operasional Prosedur Satuan Polisi Pamong Praja dan Kode Etik Polisi Pamong Praja;</li><li>Permendagri No. 26 Tahun 2020 tentang Penyelenggaraan Ketertiban Umum Dan Ketenteraman Masyarakat Serta Pelindungan Masyarakat;</li><li>${l.legalBasis || "Peraturan perundang-undangan yang berlaku."}</li></ol>
+          <p style="text-align: center; font-weight: bold; margin: 10px 0 6px;">Memberikan Tugas :</p>
+          <p>Kepada Petugas Satpol PPK yang namanya tercantum di bawah ini :</p>
+          <table class="data-table"><thead><tr><th style="width: 5%;">No</th><th style="width: 35%;">Nama & NIP</th><th style="width: 20%;">Pangkat / Gol</th><th style="width: 20%;">Jabatan</th><th style="width: 20%;">Keterangan</th></tr></thead><tbody>${rows}</tbody></table>
+          <p style="margin-top: 6px;">Untuk:</p>
+          <ol>
+            <li style="margin-bottom: 4px;">Melaksanakan tugas <b>${l.activityName}</b> yang berlokasi di wilayah Kecamatan <b>${(l.location || "").replace(/Kecamatan /i, '')}</b>, dengan jadwal sebagai berikut :<ul><li>Hari, Tanggal : ${fmtDate(l.startDate)} s.d. ${fmtDate(l.endDate)}</li><li>Tempat : ${l.locationName || "-"}${l.village ? `, Kel. ${l.village}` : ""}, Kec. ${(l.location || "").replace(/Kecamatan /i, '')}</li><li>Keperluan : ${l.purpose || l.title}</li>${specificHtml ? `<li>Keterangan Khusus : ${specificHtml}</li>` : ""}</ul></li>
+            <li style="margin-bottom: 4px;">Menggunakan sarana prasarana berupa Unit <b>${assetNames(l.assetsUsed, true)}</b> serta peralatan pendukung lainnya guna kelancaran pelaksanaan tugas.</li>
+            <li>Instruksi Khusus :<ul><li>Melaksanakan koordinasi secara intensif dengan pihak Kepolisian atau instansi terkait lainnya sesuai kebutuhan di lapangan.</li><li>Melaporkan setiap perkembangan situasi dan hasil pelaksanaan tugas secara berkala dan berjenjang kepada pimpinan.</li><li>Wajib mengutamakan aspek keselamatan personel serta masyarakat di sekitar lokasi kegiatan.</li></ul></li>
+          </ol>
+          <p style="margin: 10px 0;">Demikian Surat Tugas ini dibuat untuk dilaksanakan dengan penuh rasa tanggung jawab.</p>
+          <div class="signature-box"><p>Ditetapkan di : Trenggalek</p><p>Pada tanggal : ${new Date(l.letterDate || l.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p><p style="font-weight: bold; margin-top: 2px;">KEPALA SATUAN<br>POLISI PAMONG PRAJA DAN PEMADAM<br>KEBAKARAN KABUPATEN TRENGGALEK</p><div class="signature-space"></div><p style="font-weight: bold; text-decoration: underline;">${l.signerName || "-"}</p><p>${l.signerRank || "-"}</p><p>NIP. ${l.signerNip || "-"}</p></div>
+        </div>
+      `;
+      setTimeout(() => { window.print(); }, 500);
+    }
+
+    function downloadCSV(filename, headers, rows) {
+      const esc = (v) => '"' + String(v === null || v === undefined ? "" : v).replaceAll('"', '""') + '"';
+      const csv = [headers.map(esc).join(";")].concat(rows.map(r => r.map(esc).join(";"))).join("\n");
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" })); a.download = filename; a.click(); URL.revokeObjectURL(a.href); showFlash("Berkas diunduh.");
+    }
+    function exportLettersCsv() { downloadCSV("rekap-surat-tugas.csv", ["Kode","Nomor Resmi","Tanggal Surat","Nama Kegiatan","Jenis Kegiatan","Klasifikasi","Unit","Dasar Surat","Mulai","Selesai","Kecamatan","Desa/Kelurahan","Nama Lokasi","Petugas","Ketua Tim","Kendaraan & Peralatan","Catatan","Penandatangan","Status"], filteredLetters.value.map(l => [l.code, l.officialNumber || l.draftNumber, l.letterDate || "", l.title, l.activityName, l.classification, l.unit, l.legalBasis || "", (l.startDate + " " + (l.startTime || "")).trim(), (l.endDate + " " + (l.endTime || "")).trim(), l.location, l.village || "", l.locationName || "", (l.personnel || []).map(p => p.name).join(", "), l.teamLeader, (l.assetsUsed || []).join(", "), l.notes || "", l.signerName, (LETTER_STATUS[l.status] || {}).label || l.status])); }
+    function exportLettersPdf() { const rows = filteredLetters.value; if (!rows.length) return showFlash("Tidak ada data.", "error"); const esc = (v) => String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); const html = `<div style="font-family:'Times New Roman', Times, serif; color:#000; line-height:1.4; font-size:11px; padding:10px;"><div style="text-align:center; margin-bottom:14px; border-bottom:3px solid #000; padding-bottom:8px;"><h2 style="margin:0; font-size:16px; font-weight:bold;">REKAPITULASI SURAT TUGAS</h2><p style="margin:3px 0 0; font-size:12px;">SATUAN POLISI PAMONG PRAJA DAN KEBAKARAN KABUPATEN TRENGGALEK</p><p style="margin:3px 0 0; font-size:10px; color:#444;">Total: ${rows.length} data</p></div><table style="width:100%; border-collapse:collapse; font-size:9.5px;"><thead><tr style="background:#065f46; color:#fff;"><th style="border:1px solid #000; padding:4px; text-align:center; width:26px;">No</th><th style="border:1px solid #000; padding:4px; width:78px;">Tanggal</th><th style="border:1px solid #000; padding:4px; width:120px;">Kode / No. Resmi</th><th style="border:1px solid #000; padding:4px; width:90px;">Jenis</th><th style="border:1px solid #000; padding:4px;">Nama Kegiatan</th><th style="border:1px solid #000; padding:4px; width:110px;">Lokasi</th><th style="border:1px solid #000; padding:4px; width:90px;">Ketua Tim</th><th style="border:1px solid #000; padding:4px; width:70px;">Status</th></tr></thead><tbody>${rows.map((st, i) => `<tr><td style="border:1px solid #000; padding:3px; text-align:center;">${i + 1}</td><td style="border:1px solid #000; padding:3px;">${esc(fmtDate(st.startDate))}${st.endDate && st.endDate !== st.startDate ? " s.d. " + esc(fmtDate(st.endDate)) : ""}</td><td style="border:1px solid #000; padding:3px; font-family:monospace; font-size:8.5px;">${esc(st.code)}<br>${esc(st.officialNumber || st.draftNumber || "-")}</td><td style="border:1px solid #000; padding:3px;">${esc(st.activityName)}<br><i style="color:#a00; font-size:8px;">${esc(st.classification)}</i></td><td style="border:1px solid #000; padding:3px;">${esc(st.title)}</td><td style="border:1px solid #000; padding:3px;">${esc([st.locationName, st.village, st.location].filter(Boolean).join(", ")) || "-"}</td><td style="border:1px solid #000; padding:3px;">${esc(st.teamLeader || "-")}</td><td style="border:1px solid #000; padding:3px;">${esc((LETTER_STATUS[st.status] || {}).label || st.status)}</td></tr>`).join("")}</tbody></table><p style="margin-top:14px; font-size:9px; text-align:right; color:#666;">Dicetak: ${esc(new Date().toLocaleString("id-ID"))}</p></div>`; document.getElementById("print-area").innerHTML = html; setTimeout(() => window.print(), 400); showFlash("Menyiapkan PDF."); }
+    function exportReportsCsv() { downloadCSV("rekap-laporan-kegiatan.csv", ["Kode", "No. ST", "Waktu Aktual", "Jenis Kegiatan", "Lokasi Aktual", "Uraian Pelaksanaan", "Hasil Temuan", "Jumlah Pelanggar", "Tindakan", "Acuan Perda", "Kendala", "Rekomendasi", "Status", "Diverifikasi Oleh"], filteredReports.value.map(r => [r.code, r.stNumber || "", r.actualTime || "", r.activityName, r.actualLocation || "", r.description || "", r.results || "", r.violatorCount || 0, r.actionTaken || "", r.violationRef || "", r.obstacles || "", r.recommendation || "", (REPORT_STATUS[r.status] || {}).label || r.status, r.verifiedBy || ""])); }
+    function exportReportsPdf() { const rows = filteredReports.value; if (!rows.length) return showFlash("Tidak ada data.", "error"); const esc = (v) => String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); const html = `<div style="font-family:'Times New Roman', Times, serif; color:#000; line-height:1.35; font-size:10px; padding:10px;"><div style="text-align:center; margin-bottom:14px; border-bottom:3px solid #000; padding-bottom:8px;"><h2 style="margin:0; font-size:16px; font-weight:bold;">REKAPITULASI LAPORAN KEGIATAN</h2><p style="margin:3px 0 0; font-size:12px;">SATUAN POLISI PAMONG PRAJA DAN KEBAKARAN KABUPATEN TRENGGALEK</p><p style="margin:3px 0 0; font-size:10px; color:#444;">Total: ${rows.length} data</p></div><table style="width:100%; border-collapse:collapse; font-size:8.5px;"><thead><tr style="background:#065f46; color:#fff;"><th style="border:1px solid #000; padding:3px; text-align:center; width:22px;">No</th><th style="border:1px solid #000; padding:3px; width:70px;">Kode / ST</th><th style="border:1px solid #000; padding:3px; width:60px;">Waktu</th><th style="border:1px solid #000; padding:3px;">Jenis Kegiatan</th><th style="border:1px solid #000; padding:3px;">Lokasi</th><th style="border:1px solid #000; padding:3px;">Uraian Pelaksanaan</th><th style="border:1px solid #000; padding:3px;">Hasil Temuan</th><th style="border:1px solid #000; padding:3px; text-align:center; width:32px;">Temuan</th><th style="border:1px solid #000; padding:3px; width:55px;">Status</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td style="border:1px solid #000; padding:2.5px; text-align:center;">${i + 1}</td><td style="border:1px solid #000; padding:2.5px; font-family:monospace; font-size:8px;">${esc(r.code)}<br>${esc(r.stNumber || "-")}</td><td style="border:1px solid #000; padding:2.5px;">${esc(fmtDateTime(r.actualTime))}</td><td style="border:1px solid #000; padding:2.5px;">${esc(r.activityName)}</td><td style="border:1px solid #000; padding:2.5px;">${esc(r.actualLocation || "-")}</td><td style="border:1px solid #000; padding:2.5px;">${esc((r.description || "-").slice(0, 140))}${(r.description || "").length > 140 ? "…" : ""}</td><td style="border:1px solid #000; padding:2.5px;">${esc((r.results || "-").slice(0, 140))}${(r.results || "").length > 140 ? "…" : ""}</td><td style="border:1px solid #000; padding:2.5px; text-align:center;">${Number(r.violatorCount) || 0}</td><td style="border:1px solid #000; padding:2.5px;">${esc((REPORT_STATUS[r.status] || {}).label || r.status)}</td></tr>`).join("")}</tbody></table><p style="margin-top:14px; font-size:9px; text-align:right; color:#666;">Dicetak: ${esc(new Date().toLocaleString("id-ID"))}</p></div>`; document.getElementById("print-area").innerHTML = html; setTimeout(() => window.print(), 400); showFlash("Menyiapkan PDF."); }
+
+    return {
+      ROLES, UNITS, LETTER_STATUS, REPORT_STATUS, SPEC_LABELS, ACTION_OPTIONS, MASTER_DEFS, FORM_TEMPLATES,
+      data, loading, loadError, refresh, role, tab, adminSub, sidebarCollapsed, toggleSidebar, flash, busy, currentUser,
+      qLetter, fLetterStatus, fLetterAct, fLetterClass, qReport, fReportStatus, fFuStatus, qMaster,
+      filterYear, filterMonth, monthsList, yearsList, currentPage, itemsPerPage, resetPage,
+      detailLetter, detailReport, letterForm, editingLetterId, showExtra, petugasQuery, manualPetugas,
+      reportForm, editingReportId, fuForm, editingFuId, noteAction, noteText, masterForm, confirmDel, isUploading,
+      stats, navItems, workflowSteps, pendingActions, filteredLetters, filteredReports, filteredFu, masterRows,
+      paginatedLetters, totalLetterPages, paginatedReports, totalReportPages, paginatedFu, totalFuPages, paginatedMaster, totalMasterPages,
+      paginatedAuditLogs, totalAuditPages, activeFormFields, formatDropdownLabel,
+      actOfForm, villageOptions, presets, vehicles, equipments, candidates, issuedLetters, upcomingLetters, lettersWithoutReport, regionsByLetters, maxActCount, maxRegionCount,
+      canCreateLetter, canIssueLetter, fmtDate, fmtDateTime, isOverdue, countLettersByAct, countLetterStatus, barPct, dayOf, monthOf, switchRole,
+      openNewLetter, openEditLetter, submitLetter, isSelPetugas, togglePetugas, addManualPetugas, toggleAsset,
+      openNewReport, openEditReport, addEvidence, submitReport, closeReport, handleFileUpload,
+      openNewFu, openEditFu, submitFu, openNote, runNoteAction, issueLetter, patchLetterStatus,
+      addFollowUpFromDetail,
+      openMaster, submitMaster, confirmDeleteMaster, runDelete, regionName, badgeFor,
+      pipelineActive, letterDetailFields, doPrint, assetNames, exportLettersCsv,
+      exportLettersPdf, exportReportsCsv, exportReportsPdf,
+    };
+  }
+}).mount("#app");
+</script>
