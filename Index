@@ -8,7 +8,8 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- PATCH #1: hapus maximum-scale & user-scalable (WCAG 1.4.4) -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#064e3b">
 <meta name="format-detection" content="telephone=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -37,6 +38,17 @@
 </script>
 
 <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+<!-- PATCH #27: fallback jika CDN Vue gagal dimuat -->
+<script>
+  if (typeof Vue === "undefined") {
+    document.addEventListener("DOMContentLoaded", () => {
+      const f = document.getElementById("cdn-fallback");
+      if (f) f.style.display = "flex";
+      const p = document.getElementById("preloader");
+      if (p) p.style.display = "none";
+    });
+  }
+</script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 
 <style>
@@ -142,9 +154,24 @@
     /* Hindari pemotongan tabel di tengah halaman */
     tr { page-break-inside: avoid; }
   }
+
+  /* PATCH #27: Style untuk fallback CDN Vue gagal */
+  #cdn-fallback {
+    position: fixed; inset: 0; z-index: 200; display: none;
+    background: #0f172a; color: #e2e8f0; padding: 24px;
+    font-family: 'Inter', system-ui, sans-serif; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; gap: 12px;
+  }
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased">
+
+<!-- PATCH #27: Fallback jika CDN Vue gagal dimuat -->
+<div id="cdn-fallback">
+  <h2 style="font-size:20px;font-weight:800;">Aplikasi Tidak Dapat Dimuat</h2>
+  <p style="max-width:420px;font-size:14px;line-height:1.6;">CDN library gagal dimuat. Periksa koneksi internet dan muat ulang halaman. Jika masalah berlanjut, hubungi administrator sistem.</p>
+  <button onclick="location.reload()" style="margin-top:12px;padding:10px 20px;background:#059669;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">Muat Ulang</button>
+</div>
   
   <!-- 1. Preloader instan (HTML/CSS murni — tampil sebelum Vue siap) -->
   <div id="preloader" class="fixed inset-0 z-[110] bg-slate-950 flex flex-col items-center justify-center transition-opacity duration-300">
@@ -229,10 +256,11 @@
       </div>
     </transition>
 
-    <!-- FLOATING BUSY INDICATOR -->
+    <!-- PATCH #16: Busy indicator dengan busyMode -->
     <transition name="fade">
       <div v-if="busy" class="fixed top-20 left-1/2 -translate-x-1/2 z-[90] bg-slate-900/90 backdrop-blur-md text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.3)] flex items-center gap-3 border border-slate-700">
-        <i class="fa-solid fa-circle-notch fa-spin text-emerald-400 text-sm"></i> Menyimpan ke Database…
+        <i class="fa-solid fa-circle-notch fa-spin text-emerald-400 text-sm"></i>
+        {{ busyMode === 'save' ? 'Menyimpan ke Database…' : 'Memuat Ulang Data…' }}
       </div>
     </transition>
 
@@ -253,12 +281,12 @@
           <!-- User Info Modern -->
           <div class="hidden lg:flex items-center gap-3 bg-emerald-900/40 px-3 py-1.5 rounded-full border border-emerald-700/50">
             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-slate-900 font-extrabold text-xs shadow-inner">
-              {{ currentUser ? currentUser.name.charAt(0).toUpperCase() : 'U' }}
+              {{ currentUser && currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U' }}
             </div>
             <div class="text-right pr-2">
               <p class="text-xs font-bold text-emerald-50 leading-tight">{{ currentUser ? currentUser.name : '' }}</p>
               <p class="text-[9px] text-emerald-300/80 uppercase tracking-wider">
-                {{ currentUser ? currentUser.jabatan : '' }} 
+                {{ currentUser && currentUser.jabatan ? currentUser.jabatan : '' }} 
                 <span v-if="currentUser && currentUser.pangkatGol"> • {{ currentUser.pangkatGol }}</span>
               </p>
             </div>
@@ -344,7 +372,7 @@
                 <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                 <i class="fa-solid fa-plus relative z-10"></i> <span class="relative z-10">Buat Surat Tugas</span>
               </button>
-              <button @click="openNewReport" class="group px-6 py-3.5 bg-white/5 hover:bg-white/10 text-white ring-1 ring-white/20 hover:ring-white/40 font-bold text-sm rounded-xl transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:-translate-y-0.5">
+              <button @click="openNewReport()" class="group px-6 py-3.5 bg-white/5 hover:bg-white/10 text-white ring-1 ring-white/20 hover:ring-white/40 font-bold text-sm rounded-xl transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm hover:-translate-y-0.5">
                 <i class="fa-solid fa-clipboard-check group-hover:scale-110 transition-transform"></i> Buat Laporan
               </button>
             </div>
@@ -419,7 +447,7 @@
                   <h4 class="font-bold text-sm mt-1.5 truncate text-slate-800 group-hover:text-emerald-800 transition-colors">{{ item.title }}</h4>
                   <p class="text-[11px] text-slate-500 mt-0.5">{{ item.status }}</p>
                 </div>
-                <button @click="item.go()" class="px-3.5 py-2 bg-emerald-50 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white text-xs font-bold rounded-xl shrink-0 transition-colors shadow-sm"><i class="fa-solid fa-arrow-right"></i></button>
+                <button @click="item.go()" class="px-3.5 py-2 bg-emerald-50 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white text-xs font-bold rounded-xl shrink-0 transition-colors shadow-sm" aria-label="Buka tindakan"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
               </div>
             </div>
           </div>
@@ -495,13 +523,13 @@
           <div><h2 class="text-2xl font-extrabold text-slate-800">Surat Tugas (ST)</h2><p class="text-sm text-slate-500">Alur ringkas: Koordinator/Pimpinan menyusun → Pimpinan menyetujui = langsung terbit → pelaksanaan → laporan.</p></div>
           <div class="grid grid-cols-3 gap-2 w-full sm:flex sm:w-auto sm:gap-2">
             <button @click="exportLettersCsv" class="justify-center px-2 sm:px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-[10px] sm:text-xs rounded-xl flex items-center gap-1.5 sm:gap-2 shadow-sm transition-colors whitespace-nowrap" title="Unduh Excel/CSV sesuai filter aktif">
-              <i class="fa-solid fa-file-excel text-emerald-600"></i> Excel
+              <i class="fa-solid fa-file-excel text-emerald-600" aria-hidden="true"></i> Excel
             </button>
             <button @click="exportLettersPdf" class="justify-center px-2 sm:px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-[10px] sm:text-xs rounded-xl flex items-center gap-1.5 sm:gap-2 shadow-sm transition-colors whitespace-nowrap" title="Cetak / Simpan PDF sesuai filter aktif">
-              <i class="fa-solid fa-file-pdf text-red-500"></i> PDF
+              <i class="fa-solid fa-file-pdf text-red-500" aria-hidden="true"></i> PDF
             </button>
             <button v-if="canCreateLetter" @click="openNewLetter" class="justify-center px-2 sm:px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-[10px] sm:text-xs rounded-xl shadow-md flex items-center gap-1.5 sm:gap-2 transition-all hover:-translate-y-0.5 whitespace-nowrap">
-              <i class="fa-solid fa-plus"></i> Buat ST Baru
+              <i class="fa-solid fa-plus" aria-hidden="true"></i> Buat ST Baru
             </button>
           </div>
         </div>
@@ -509,19 +537,24 @@
         <!-- Filter Bar Surat Tugas -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col lg:flex-row gap-3 sticky top-[72px] z-20">
           <div class="relative flex-1">
-            <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400"></i>
-            <input v-model="qLetter" @input="resetPage('letters')" placeholder="Cari nama kegiatan, nomor…" class="inp !text-sm !pl-10 w-full shadow-inner bg-slate-50 focus:bg-white transition-colors">
+            <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400" aria-hidden="true"></i>
+            <!-- PATCH #17: search input debounce -->
+            <input v-model="qLetterInput" placeholder="Cari nama kegiatan, nomor…" aria-label="Cari surat tugas" class="inp !text-sm !pl-10 w-full shadow-inner bg-slate-50 focus:bg-white transition-colors">
           </div>
-          <select v-model="filterYear" @change="resetPage('letters')" class="inp lg:w-32 bg-slate-50 focus:bg-white cursor-pointer">
+          <select v-model="filterYear" @change="resetPage('letters')" class="inp lg:w-32 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter tahun">
             <option :value="0">Semua Tahun</option>
             <option v-for="y in yearsList" :value="y">{{ y }}</option>
           </select>          
-          <select v-model="filterMonth" @change="resetPage('letters')" class="inp lg:w-40 bg-slate-50 focus:bg-white cursor-pointer">
+          <select v-model="filterMonth" @change="resetPage('letters')" class="inp lg:w-40 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter bulan">
             <option :value="0">Semua Bulan</option>
             <option v-for="m in monthsList" :value="m.val">{{ m.label }}</option>
           </select>
-          <select v-model="fLetterStatus" @change="resetPage('letters')" class="inp lg:w-48 bg-slate-50 focus:bg-white cursor-pointer"><option value="ALL">Semua Status</option><option v-for="(v, k) in LETTER_STATUS" :value="k">{{ v.label }}</option></select>
-          <select v-model="fLetterAct" @change="resetPage('letters')" class="inp lg:w-52 bg-slate-50 focus:bg-white cursor-pointer"><option value="ALL">Semua Jenis Kegiatan</option><option v-for="a in data.activityTypes" :value="a.code">{{ a.name }}</option></select>
+          <select v-model="fLetterStatus" @change="resetPage('letters')" class="inp lg:w-48 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter status">
+            <option value="ALL">Semua Status</option><option v-for="(v, k) in LETTER_STATUS" :value="k">{{ v.label }}</option>
+          </select>
+          <select v-model="fLetterAct" @change="resetPage('letters')" class="inp lg:w-52 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter jenis kegiatan">
+            <option value="ALL">Semua Jenis Kegiatan</option><option v-for="a in data.activityTypes" :value="a.code">{{ a.name }}</option>
+          </select>
         </div>
 
         <!-- Chip Filter Klasifikasi Aktif -->
@@ -529,8 +562,8 @@
           <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl shadow-sm">
             <i class="fa-solid fa-filter"></i>
             Filter Klasifikasi: <b>{{ fLetterClass }}</b>
-            <button @click="fLetterClass = 'ALL'; resetPage('letters')" class="ml-1 text-red-400 hover:text-red-800 transition-colors" title="Hapus filter klasifikasi">
-              <i class="fa-solid fa-circle-xmark"></i>
+            <button @click="fLetterClass = 'ALL'; resetPage('letters')" class="ml-1 text-red-400 hover:text-red-800 transition-colors" title="Hapus filter klasifikasi" aria-label="Hapus filter klasifikasi">
+              <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
             </button>
           </span>
         </div>
@@ -611,25 +644,30 @@
                   <!-- Aksi -->
                   <td class="p-4 pr-6">
                     <div class="flex justify-end gap-1.5 flex-wrap">
-                      <button @click="detailLetter = st" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors" title="Detail"><i class="fa-regular fa-eye"></i></button>
-                      <button v-if="st.status === 'PENDING_APPROVAL' && role === 'PIMPINAN'" @click="openNote('approveLetter', st.id, 'Setujui & Terbitkan ' + st.code, false)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors" title="Setujui & Terbitkan"><i class="fa-solid fa-stamp"></i></button>
-                      <button v-if="(st.status === 'READY_TO_ISSUE' || (st.status === 'DRAFT' && role === 'PIMPINAN')) && canIssueLetter" @click="issueLetter(st)" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold rounded-lg shadow-sm transition-colors" title="Terbitkan"><i class="fa-solid fa-file-circle-check"></i></button>
-                      <button v-if="['DRAFT','REJECTED'].includes(st.status) && canCreateLetter" @click="openEditLetter(st)" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg transition-colors border border-blue-200" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                      <!-- PATCH #25: aria-label pada tombol ikon -->
+                      <button @click="detailLetter = st" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors" title="Detail" aria-label="Lihat detail surat tugas"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+                      <button v-if="st.status === 'PENDING_APPROVAL' && role === 'PIMPINAN'" @click="openNote('approveLetter', st.id, 'Setujui & Terbitkan ' + st.code, false)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors" title="Setujui & Terbitkan" aria-label="Setujui dan terbitkan"><i class="fa-solid fa-stamp" aria-hidden="true"></i></button>
+                      <button v-if="(st.status === 'READY_TO_ISSUE' || (st.status === 'DRAFT' && role === 'PIMPINAN')) && canIssueLetter" @click="issueLetter(st)" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold rounded-lg shadow-sm transition-colors" title="Terbitkan" aria-label="Terbitkan"><i class="fa-solid fa-file-circle-check" aria-hidden="true"></i></button>
+                      <button v-if="['DRAFT','REJECTED'].includes(st.status) && canCreateLetter" @click="openEditLetter(st)" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg transition-colors border border-blue-200" title="Edit" aria-label="Edit surat tugas"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
                     </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <!-- Paginasi ST -->
+          <!-- PATCH #21 + #22: Empty state + window pagination untuk ST -->
           <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/30 gap-4">
-            <span class="text-[11px] text-slate-500">
+            <span v-if="filteredLetters.length" class="text-[11px] text-slate-500">
               Menampilkan <b>{{ Math.min((currentPage.letters - 1) * itemsPerPage + 1, filteredLetters.length) }}</b> - <b>{{ Math.min(currentPage.letters * itemsPerPage, filteredLetters.length) }}</b> dari <b>{{ filteredLetters.length }}</b> data
             </span>
-            <div class="flex gap-1 flex-wrap">
-              <button @click="currentPage.letters = Math.max(1, currentPage.letters - 1)" :disabled="currentPage.letters === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Prev</button>
-              <button v-for="p in totalLetterPages" :key="p" @click="currentPage.letters = p" :class="currentPage.letters === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors">{{ p }}</button>
-              <button @click="currentPage.letters = Math.min(totalLetterPages, currentPage.letters + 1)" :disabled="currentPage.letters === totalLetterPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            <span v-else class="text-[11px] text-slate-500 italic">Tidak ada data</span>
+            <div class="flex gap-1 flex-wrap items-center">
+              <button @click="currentPage.letters = Math.max(1, currentPage.letters - 1)" :disabled="currentPage.letters === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Halaman sebelumnya">Prev</button>
+              <template v-for="p in paginationWindow(currentPage.letters, totalLetterPages)" :key="p === null ? 'ell' : p">
+                <span v-if="p === null" class="px-1 text-slate-400 self-center text-xs">…</span>
+                <button v-else @click="currentPage.letters = p" :class="currentPage.letters === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors" :aria-label="'Halaman ' + p">{{ p }}</button>
+              </template>
+              <button @click="currentPage.letters = Math.min(totalLetterPages, currentPage.letters + 1)" :disabled="currentPage.letters === totalLetterPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Halaman berikutnya">Next</button>
             </div>
           </div>
         </div>
@@ -640,32 +678,32 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div><h2 class="text-2xl font-extrabold text-slate-800">Laporan Kegiatan</h2><p class="text-sm text-slate-500">Laporan hanya dari ST terbit. Laporan terverifikasi otomatis melahirkan tindak lanjut.</p></div>
           <div class="flex gap-2 w-full sm:w-auto flex-wrap">
-            <button @click="exportReportsCsv" class="flex-1 sm:flex-none justify-center px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition-colors" title="Unduh Excel/CSV sesuai filter aktif"><i class="fa-solid fa-file-excel text-emerald-600"></i> Excel/CSV</button>
-            <button @click="exportReportsPdf" class="flex-1 sm:flex-none justify-center px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition-colors" title="Cetak / Simpan PDF sesuai filter aktif"><i class="fa-solid fa-file-pdf text-red-500"></i> PDF</button>
-            <button @click="openNewReport" class="flex-1 sm:flex-none justify-center px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl shadow-md flex items-center gap-2 transition-all hover:-translate-y-0.5"><i class="fa-solid fa-plus"></i> Buat Laporan Baru</button>
+            <button @click="exportReportsCsv" class="flex-1 sm:flex-none justify-center px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition-colors" title="Unduh Excel/CSV sesuai filter aktif"><i class="fa-solid fa-file-excel text-emerald-600" aria-hidden="true"></i> Excel/CSV</button>
+            <button @click="exportReportsPdf" class="flex-1 sm:flex-none justify-center px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition-colors" title="Cetak / Simpan PDF sesuai filter aktif"><i class="fa-solid fa-file-pdf text-red-500" aria-hidden="true"></i> PDF</button>
+            <button @click="openNewReport()" class="flex-1 sm:flex-none justify-center px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl shadow-md flex items-center gap-2 transition-all hover:-translate-y-0.5"><i class="fa-solid fa-plus" aria-hidden="true"></i> Buat Laporan Baru</button>
           </div>
         </div>
         
         <!-- Filter Bar Laporan -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row gap-3">
           <div class="relative flex-1">
-            <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400"></i>
-            <input v-model="qReport" @input="resetPage('reports')" placeholder="Cari kode, nomor ST, kegiatan, lokasi…" class="inp !text-sm !pl-10 w-full bg-slate-50 focus:bg-white transition-colors shadow-inner">
+            <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400" aria-hidden="true"></i>
+            <!-- PATCH #17: search input debounce -->
+            <input v-model="qReportInput" placeholder="Cari kode, nomor ST, kegiatan, lokasi…" aria-label="Cari laporan" class="inp !text-sm !pl-10 w-full bg-slate-50 focus:bg-white transition-colors shadow-inner">
           </div>
-          <select v-model="filterYear" @change="resetPage('reports')" class="inp sm:w-32 bg-slate-50 focus:bg-white cursor-pointer">
+          <select v-model="filterYear" @change="resetPage('reports')" class="inp sm:w-32 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter tahun">
             <option :value="0">Semua Tahun</option>
             <option v-for="y in yearsList" :value="y">{{ y }}</option>
           </select>          
-          <select v-model="filterMonth" @change="resetPage('reports')" class="inp sm:w-40 bg-slate-50 focus:bg-white cursor-pointer">
+          <select v-model="filterMonth" @change="resetPage('reports')" class="inp sm:w-40 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter bulan">
             <option :value="0">Semua Bulan</option>
             <option v-for="m in monthsList" :value="m.val">{{ m.label }}</option>
           </select>
-          <select v-model="fReportStatus" @change="resetPage('reports')" class="inp sm:w-56 bg-slate-50 focus:bg-white cursor-pointer"><option value="ALL">Semua Status Laporan</option><option v-for="(v,k) in REPORT_STATUS" :value="k">{{ v.label }}</option></select>
+          <select v-model="fReportStatus" @change="resetPage('reports')" class="inp sm:w-56 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter status laporan"><option value="ALL">Semua Status Laporan</option><option v-for="(v,k) in REPORT_STATUS" :value="k">{{ v.label }}</option></select>
         </div>
 
         <div class="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
           <div class="overflow-x-auto">
-            <!-- Lebar tabel diperbesar menjadi 1100px agar 6 kolom muat dengan lega -->
             <table class="w-full text-left text-sm min-w-[1200px]">
               <thead>
                 <tr class="bg-slate-50/80 text-slate-500 border-b border-slate-200 font-semibold text-[11px] uppercase tracking-widest">
@@ -720,24 +758,29 @@
                   <!-- 6. Kolom Aksi -->
                   <td class="p-4 pr-6 align-top">
                     <div class="flex justify-end gap-1.5 flex-wrap">
-                      <button @click="detailReport = rep" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors" title="Detail"><i class="fa-regular fa-eye"></i></button>
-                      <button v-if="rep.status === 'SUBMITTED' && ['KOORDINATOR','ADMIN'].includes(role)" @click="openNote('verifyReport', rep.id, 'Verifikasi ' + rep.code, false)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors" title="Verifikasi"><i class="fa-solid fa-user-check"></i></button>
-                      <button v-if="['DRAFT','RETURNED'].includes(rep.status)" @click="openEditReport(rep)" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg transition-colors border border-blue-200" title="Revisi"><i class="fa-solid fa-pen"></i></button>
+                      <!-- PATCH #25: aria-label -->
+                      <button @click="detailReport = rep" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors" title="Detail" aria-label="Lihat detail laporan"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+                      <button v-if="rep.status === 'SUBMITTED' && ['KOORDINATOR','ADMIN'].includes(role)" @click="openNote('verifyReport', rep.id, 'Verifikasi ' + rep.code, false)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors" title="Verifikasi" aria-label="Verifikasi laporan"><i class="fa-solid fa-user-check" aria-hidden="true"></i></button>
+                      <button v-if="['DRAFT','RETURNED'].includes(rep.status)" @click="openEditReport(rep)" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg transition-colors border border-blue-200" title="Revisi" aria-label="Revisi laporan"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
                     </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <!-- Paginasi Laporan -->
+          <!-- PATCH #21 + #22: Empty state + window pagination untuk Reports -->
           <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/30 gap-4">
-            <span class="text-[11px] text-slate-500">
+            <span v-if="filteredReports.length" class="text-[11px] text-slate-500">
               Menampilkan <b>{{ Math.min((currentPage.reports - 1) * itemsPerPage + 1, filteredReports.length) }}</b> - <b>{{ Math.min(currentPage.reports * itemsPerPage, filteredReports.length) }}</b> dari <b>{{ filteredReports.length }}</b> data
             </span>
-            <div class="flex gap-1 flex-wrap">
-              <button @click="currentPage.reports = Math.max(1, currentPage.reports - 1)" :disabled="currentPage.reports === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Prev</button>
-              <button v-for="p in totalReportPages" :key="p" @click="currentPage.reports = p" :class="currentPage.reports === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors">{{ p }}</button>
-              <button @click="currentPage.reports = Math.min(totalReportPages, currentPage.reports + 1)" :disabled="currentPage.reports === totalReportPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            <span v-else class="text-[11px] text-slate-500 italic">Tidak ada data</span>
+            <div class="flex gap-1 flex-wrap items-center">
+              <button @click="currentPage.reports = Math.max(1, currentPage.reports - 1)" :disabled="currentPage.reports === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Halaman sebelumnya">Prev</button>
+              <template v-for="p in paginationWindow(currentPage.reports, totalReportPages)" :key="p === null ? 'ell' : p">
+                <span v-if="p === null" class="px-1 text-slate-400 self-center text-xs">…</span>
+                <button v-else @click="currentPage.reports = p" :class="currentPage.reports === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors" :aria-label="'Halaman ' + p">{{ p }}</button>
+              </template>
+              <button @click="currentPage.reports = Math.min(totalReportPages, currentPage.reports + 1)" :disabled="currentPage.reports === totalReportPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Halaman berikutnya">Next</button>
             </div>
           </div>
         </div>
@@ -751,7 +794,7 @@
             <div class="bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1 border border-slate-200">
               <button v-for="f in [['ALL','Semua'],['PROSES','Dalam Proses'],['OVERDUE','Lewat Tenggat'],['SELESAI','Selesai']]" :key="f[0]" @click="fFuStatus = f[0]; resetPage('fu')" :class="fFuStatus === f[0] ? 'bg-white text-emerald-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all">{{ f[1] }}</button>
             </div>
-            <button @click="openNewFu()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl shadow-md flex items-center gap-2 transition-all hover:-translate-y-0.5"><i class="fa-solid fa-plus"></i> TL Manual</button>
+            <button @click="openNewFu()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl shadow-md flex items-center gap-2 transition-all hover:-translate-y-0.5"><i class="fa-solid fa-plus" aria-hidden="true"></i> TL Manual</button>
           </div>
         </div>
         
@@ -780,23 +823,26 @@
             <div class="pt-3 border-t border-slate-100 flex justify-between items-center gap-2">
               <span class="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">{{ fu.code }}</span>
               <span class="flex gap-1.5" v-if="fu.status !== 'SELESAI'">
-                <button @click="openEditFu(fu)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-lg transition-colors" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                <button @click="openNote('completeFu', fu.id, 'Selesaikan ' + fu.code, false)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all hover:scale-105 flex items-center gap-1.5"><i class="fa-solid fa-check"></i> Selesai</button>
+                <button @click="openEditFu(fu)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-lg transition-colors" title="Edit" aria-label="Edit tindak lanjut"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+                <button @click="openNote('completeFu', fu.id, 'Selesaikan ' + fu.code, false)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all hover:scale-105 flex items-center gap-1.5"><i class="fa-solid fa-check" aria-hidden="true"></i> Selesai</button>
               </span>
               <span v-else class="text-[11px] text-emerald-600 font-extrabold bg-emerald-50 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-circle-check mr-1"></i> Tuntas</span>
             </div>
           </div>
         </div>
 
-        <!-- Paginasi Tindak Lanjut -->
+        <!-- PATCH #21 + #22: Empty state + window pagination untuk Fu -->
         <div v-if="filteredFu.length" class="flex flex-col sm:flex-row items-center justify-between bg-white border border-slate-200 rounded-3xl p-4 shadow-sm mt-4 gap-4">
           <span class="text-[11px] text-slate-500">
             Menampilkan <b>{{ Math.min((currentPage.fu - 1) * itemsPerPage + 1, filteredFu.length) }}</b> - <b>{{ Math.min(currentPage.fu * itemsPerPage, filteredFu.length) }}</b> dari <b>{{ filteredFu.length }}</b> data
           </span>
-          <div class="flex gap-1 flex-wrap">
-            <button @click="currentPage.fu = Math.max(1, currentPage.fu - 1)" :disabled="currentPage.fu === 1" class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed">Prev</button>
-            <button v-for="p in totalFuPages" :key="p" @click="currentPage.fu = p" :class="currentPage.fu === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 border border-slate-300 text-slate-600 hover:bg-slate-100'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors">{{ p }}</button>
-            <button @click="currentPage.fu = Math.min(totalFuPages, currentPage.fu + 1)" :disabled="currentPage.fu === totalFuPages" class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+          <div class="flex gap-1 flex-wrap items-center">
+            <button @click="currentPage.fu = Math.max(1, currentPage.fu - 1)" :disabled="currentPage.fu === 1" class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Halaman sebelumnya">Prev</button>
+            <template v-for="p in paginationWindow(currentPage.fu, totalFuPages)" :key="p === null ? 'ell' : p">
+              <span v-if="p === null" class="px-1 text-slate-400 self-center text-xs">…</span>
+              <button v-else @click="currentPage.fu = p" :class="currentPage.fu === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 border border-slate-300 text-slate-600 hover:bg-slate-100'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors" :aria-label="'Halaman ' + p">{{ p }}</button>
+            </template>
+            <button @click="currentPage.fu = Math.min(totalFuPages, currentPage.fu + 1)" :disabled="currentPage.fu === totalFuPages" class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Halaman berikutnya">Next</button>
           </div>
         </div>
       </section>
@@ -834,7 +880,7 @@
         <div class="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
           <h3 class="font-bold text-sm mb-4 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-amber-500"></i> ST Terbit Tanpa Laporan</h3>
           <p v-if="!lettersWithoutReport.length" class="text-center py-8 text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-100 font-semibold"><i class="fa-solid fa-check-circle text-xl mb-2"></i><br>Seluruh ST terbit sudah memiliki laporan.</p>
-          <div v-else class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden"><div v-for="l in lettersWithoutReport" :key="l.id" class="p-3 bg-white hover:bg-slate-50 transition-colors flex flex-wrap items-center gap-3"><div class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-file-lines"></i></div><div class="flex-1 min-w-[220px]"><p class="text-xs font-bold text-slate-800">{{ l.code }} — {{ l.title }}</p><p class="text-[10px] text-slate-500 mt-0.5">{{ l.officialNumber }} · {{ fmtDate(l.startDate) }} · Ketua: {{ l.teamLeader }}</p></div><button @click="tab='reports'; openNewReport()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 text-[11px] font-bold rounded-lg shadow-sm transition-colors"><i class="fa-solid fa-plus mr-1"></i> Laporan</button></div></div>
+          <div v-else class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden"><div v-for="l in lettersWithoutReport" :key="l.id" class="p-3 bg-white hover:bg-slate-50 transition-colors flex flex-wrap items-center gap-3"><div class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-file-lines"></i></div><div class="flex-1 min-w-[220px]"><p class="text-xs font-bold text-slate-800">{{ l.code }} — {{ l.title }}</p><p class="text-[10px] text-slate-500 mt-0.5">{{ l.officialNumber }} · {{ fmtDate(l.startDate) }} · Ketua: {{ l.teamLeader }}</p></div><button @click="openNewReport(l.id); tab='reports'" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 text-[11px] font-bold rounded-lg shadow-sm transition-colors"><i class="fa-solid fa-plus mr-1" aria-hidden="true"></i> Laporan</button></div></div>
         </div>
       </section>
 
@@ -842,14 +888,10 @@
       <section v-if="tab === 'admin' && role === 'ADMIN'" class="space-y-5 animate-fade-up">
         <div><h2 class="text-2xl font-extrabold text-slate-800">Administrasi Sistem</h2><p class="text-sm text-slate-500">Kelola 8 master data terintegrasi langsung dengan Spreadsheet.</p></div>
         
-        <!-- Tab Bar Master Data -->
         <div class="flex flex-wrap gap-2">
-          <!-- Tombol Khusus Gabungan Wilayah -->
           <button @click="adminSub = 'wilayah'; qMaster = ''; resetPage('master')" :class="adminSub === 'wilayah' ? 'bg-slate-900 text-white shadow-md ring-2 ring-slate-900 ring-offset-2 scale-105' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2">
             Wilayah & Desa <span :class="adminSub === 'wilayah' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'" class="px-1.5 py-0.5 rounded text-[10px]">{{ data.regions.length }}</span>
           </button>
-
-          <!-- Looping Master Lainnya (Sembunyikan regions & villages dari loop) -->
           <template v-for="(def, key) in MASTER_DEFS" :key="key">
             <button v-if="key !== 'regions' && key !== 'villages'" @click="adminSub = key; qMaster = ''; resetPage('master')" :class="adminSub === key ? 'bg-slate-900 text-white shadow-md ring-2 ring-slate-900 ring-offset-2 scale-105' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2">
               {{ def.label }} <span :class="adminSub === key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'" class="px-1.5 py-0.5 rounded text-[10px]">{{ data[key].length }}</span>
@@ -857,7 +899,6 @@
           </template>
         </div>
         
-        <!-- ================= KONTEN KHUSUS: WILAYAH & DESA ================= -->
         <div v-if="adminSub === 'wilayah'" class="space-y-4">
           <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
@@ -869,7 +910,6 @@
 
           <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             <div v-for="reg in data.regions.filter(r => r.name.toLowerCase().includes(qMaster.toLowerCase()))" :key="reg.code" class="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-              <!-- Header Kecamatan -->
               <div class="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-start">
                 <div>
                   <h4 class="font-extrabold text-sm text-slate-800 flex items-center gap-2">
@@ -879,12 +919,11 @@
                   <p class="text-[10px] text-slate-400 font-mono mt-1">Kode: {{ reg.code }} · {{ data.villages.filter(v => v.regionCode === reg.code).length }} Desa</p>
                 </div>
                 <div class="flex gap-1">
-                  <button @click="openMaster('regions', reg)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors" title="Edit Kecamatan"><i class="fa-solid fa-pen text-xs"></i></button>
-                  <button @click="confirmDeleteMaster(reg)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors" title="Hapus Kecamatan"><i class="fa-solid fa-trash text-xs"></i></button>
+                  <button @click="openMaster('regions', reg)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors" title="Edit Kecamatan" aria-label="Edit kecamatan"><i class="fa-solid fa-pen text-xs" aria-hidden="true"></i></button>
+                  <button @click="confirmDeleteMaster(reg)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors" title="Hapus Kecamatan" aria-label="Hapus kecamatan"><i class="fa-solid fa-trash text-xs" aria-hidden="true"></i></button>
                 </div>
               </div>
               
-              <!-- List Desa -->
               <div class="p-3 flex-1 overflow-y-auto max-h-[250px] space-y-1.5 custom-scrollbar bg-white">
                 <div v-for="v in data.villages.filter(x => x.regionCode === reg.code)" :key="v.code" class="flex justify-between items-center group px-2.5 py-1.5 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
                   <div class="min-w-0 flex-1">
@@ -892,8 +931,8 @@
                     <p class="text-[9px] text-slate-400 font-mono">{{ v.code }}</p>
                   </div>
                   <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button @click="openMaster('villages', v)" class="text-slate-400 hover:text-blue-600 p-1" title="Edit Desa"><i class="fa-solid fa-pen text-[10px]"></i></button>
-                    <button @click="confirmDeleteMaster(v)" class="text-slate-400 hover:text-red-600 p-1" title="Hapus Desa"><i class="fa-solid fa-trash text-[10px]"></i></button>
+                    <button @click="openMaster('villages', v)" class="text-slate-400 hover:text-blue-600 p-1" title="Edit Desa" aria-label="Edit desa"><i class="fa-solid fa-pen text-[10px]" aria-hidden="true"></i></button>
+                    <button @click="confirmDeleteMaster(v)" class="text-slate-400 hover:text-red-600 p-1" title="Hapus Desa" aria-label="Hapus desa"><i class="fa-solid fa-trash text-[10px]" aria-hidden="true"></i></button>
                   </div>
                 </div>
                 <div v-if="!data.villages.some(x => x.regionCode === reg.code)" class="text-center py-4 text-[11px] text-slate-400 italic">
@@ -901,7 +940,6 @@
                 </div>
               </div>
               
-              <!-- Tombol Tambah Desa -->
               <div class="p-3 border-t border-slate-100 bg-slate-50/50">
                 <button @click="openMaster('villages', null, { regionCode: reg.code })" class="w-full py-1.5 bg-white border border-slate-300 hover:border-emerald-400 hover:text-emerald-700 text-slate-600 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5">
                   <i class="fa-solid fa-plus"></i> Tambah Desa
@@ -911,12 +949,11 @@
           </div>
         </div>
 
-        <!-- ================= KONTEN MASTER DATA LAINNYA ================= -->
         <div v-if="adminSub !== 'wilayah'" class="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
           <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
             <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-database text-emerald-600 mr-2"></i> Master Data: {{ MASTER_DEFS[adminSub].label }}</h3>
             <div class="flex w-full sm:w-auto gap-2">
-              <div class="relative flex-1 sm:w-64"><i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i><input v-model="qMaster" @input="resetPage('master')" placeholder="Cari data…" class="inp !py-2 !pl-8 text-xs w-full"></div>
+              <div class="relative flex-1 sm:w-64"><i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i><input v-model="qMaster" @input="resetPage('master')" placeholder="Cari data…" aria-label="Cari master data" class="inp !py-2 !pl-8 text-xs w-full"></div>
               <button @click="openMaster(adminSub)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm shrink-0 transition-colors"><i class="fa-solid fa-plus"></i> Tambah</button>
             </div>
           </div>
@@ -937,27 +974,30 @@
                     <span v-else :class="c.key === 'perdaNo' ? 'font-bold text-slate-800' : 'text-slate-500'">{{ row[c.key] }}</span>
                   </td>
                   <td class="p-3 pr-5 text-right whitespace-nowrap">
-                    <button @click="openMaster(adminSub, row)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors mr-1" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                    <button @click="confirmDeleteMaster(row)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    <button @click="openMaster(adminSub, row)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors mr-1" title="Edit" aria-label="Edit"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+                    <button @click="confirmDeleteMaster(row)" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors" title="Hapus" aria-label="Hapus"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <!-- Paginasi Master Data -->
+          <!-- PATCH #21 + #22: Empty state + window pagination untuk Master -->
           <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/30 gap-4">
-            <span class="text-[11px] text-slate-500">
+            <span v-if="masterRows.length" class="text-[11px] text-slate-500">
               Menampilkan <b>{{ Math.min((currentPage.master - 1) * itemsPerPage + 1, masterRows.length) }}</b> - <b>{{ Math.min(currentPage.master * itemsPerPage, masterRows.length) }}</b> dari <b>{{ masterRows.length }}</b> data
             </span>
-            <div class="flex gap-1 flex-wrap">
-              <button @click="currentPage.master = Math.max(1, currentPage.master - 1)" :disabled="currentPage.master === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Prev</button>
-              <button v-for="p in totalMasterPages" :key="p" @click="currentPage.master = p" :class="currentPage.master === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors">{{ p }}</button>
-              <button @click="currentPage.master = Math.min(totalMasterPages, currentPage.master + 1)" :disabled="currentPage.master === totalMasterPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            <span v-else class="text-[11px] text-slate-500 italic">Tidak ada data</span>
+            <div class="flex gap-1 flex-wrap items-center">
+              <button @click="currentPage.master = Math.max(1, currentPage.master - 1)" :disabled="currentPage.master === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Halaman sebelumnya">Prev</button>
+              <template v-for="p in paginationWindow(currentPage.master, totalMasterPages)" :key="p === null ? 'ell' : p">
+                <span v-if="p === null" class="px-1 text-slate-400 self-center text-xs">…</span>
+                <button v-else @click="currentPage.master = p" :class="currentPage.master === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors" :aria-label="'Halaman ' + p">{{ p }}</button>
+              </template>
+              <button @click="currentPage.master = Math.min(totalMasterPages, currentPage.master + 1)" :disabled="currentPage.master === totalMasterPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Halaman berikutnya">Next</button>
             </div>
           </div>
         </div>
         
-        <!-- ================= AUDIT TRAIL SISTEM (PAGINASI 25) ================= -->
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/60">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
             <h3 class="font-bold text-sm flex items-center gap-2">
@@ -981,15 +1021,18 @@
               </tbody>
             </table>
           </div>
-          <!-- Paginasi Audit Trail -->
+          <!-- PATCH #21 + #22: Empty state + window pagination untuk Audit -->
           <div v-if="data.auditLogs.length" class="flex flex-col sm:flex-row items-center justify-between pt-4 mt-4 border-t border-slate-100 gap-4">
             <span class="text-[11px] text-slate-500">
               Menampilkan <b>{{ Math.min((currentPage.audit - 1) * itemsPerPage + 1, data.auditLogs.length) }}</b> - <b>{{ Math.min(currentPage.audit * itemsPerPage, data.auditLogs.length) }}</b> dari <b>{{ data.auditLogs.length }}</b> entri
             </span>
-            <div class="flex gap-1 flex-wrap">
-              <button @click="currentPage.audit = Math.max(1, currentPage.audit - 1)" :disabled="currentPage.audit === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Prev</button>
-              <button v-for="p in totalAuditPages" :key="p" @click="currentPage.audit = p" :class="currentPage.audit === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors">{{ p }}</button>
-              <button @click="currentPage.audit = Math.min(totalAuditPages, currentPage.audit + 1)" :disabled="currentPage.audit === totalAuditPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            <div class="flex gap-1 flex-wrap items-center">
+              <button @click="currentPage.audit = Math.max(1, currentPage.audit - 1)" :disabled="currentPage.audit === 1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Halaman sebelumnya">Prev</button>
+              <template v-for="p in paginationWindow(currentPage.audit, totalAuditPages)" :key="p === null ? 'ell' : p">
+                <span v-if="p === null" class="px-1 text-slate-400 self-center text-xs">…</span>
+                <button v-else @click="currentPage.audit = p" :class="currentPage.audit === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors" :aria-label="'Halaman ' + p">{{ p }}</button>
+              </template>
+              <button @click="currentPage.audit = Math.min(totalAuditPages, currentPage.audit + 1)" :disabled="currentPage.audit === totalAuditPages" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Halaman berikutnya">Next</button>
             </div>
           </div>
         </div>
@@ -1006,8 +1049,9 @@
   }
 </style>
 
-<!-- ===== MODAL FORM ST (9 BARIS) ===== -->
-<div v-if="letterForm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
+<!-- ===== MODAL FORM ST ===== -->
+<!-- PATCH #20: backdrop click close -->
+<div v-if="letterForm" @click.self="letterForm = null" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] w-full max-w-4xl p-5 sm:p-7 space-y-6 my-4 max-h-[94vh] overflow-y-auto border border-white/20 custom-scrollbar">
     
     <!-- Header -->
@@ -1021,7 +1065,7 @@
           <p class="text-xs text-slate-500 mt-1">Lengkapi data form untuk menyusun surat tugas.</p>
         </div>
       </div>
-      <button @click="letterForm = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <button @click="letterForm = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all" aria-label="Tutup modal"><i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i></button>
     </div>
 
     <!-- Info Banner -->
@@ -1038,36 +1082,32 @@
       
       <!-- Baris 1: Jenis Kegiatan -->
       <div class="md:col-span-2">
-        <label class="lbl flex items-center"><span class="rown">1</span>Jenis Kegiatan <span class="text-red-500 ml-1">*</span></label>
-        <select v-model="letterForm.activityCode" class="inp font-bold text-slate-800 bg-slate-50 focus:bg-white text-sm py-3 shadow-sm"><option v-for="a in data.activityTypes" :value="a.code">{{ a.name }} ({{ a.classification }})</option></select>
+        <!-- PATCH #26: label for + input id -->
+        <label for="st-activity" class="lbl flex items-center"><span class="rown">1</span>Jenis Kegiatan <span class="text-red-500 ml-1">*</span></label>
+        <select id="st-activity" v-model="letterForm.activityCode" class="inp font-bold text-slate-800 bg-slate-50 focus:bg-white text-sm py-3 shadow-sm"><option v-for="a in data.activityTypes" :value="a.code">{{ a.name }} ({{ a.classification }})</option></select>
         <div v-if="actOfForm" class="flex items-center gap-2 mt-2 flex-wrap">
           <span :class="actOfForm.classification === 'TERBATAS' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-sky-100 text-sky-700 border-sky-200'" class="px-2.5 py-1 rounded-lg font-bold border text-[10px] shadow-sm"><i class="fa-solid fa-tag mr-1"></i>{{ actOfForm.classification }}</span>
           <span class="text-[11px] text-slate-500 font-mono bg-slate-100 px-2 py-1 rounded-lg">{{ actOfForm.stCode }} · LP: {{ actOfForm.reportCode }}</span>
         </div>
       </div>
 
-      <!-- Baris 2: Dasar Surat & Tanggal (2:1) -->
+      <!-- Baris 2: Dasar Surat & Tanggal -->
       <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-5">
         <div class="md:col-span-2">
-          <label class="lbl flex items-center"><span class="rown">2</span>Dasar Surat <span class="text-red-500 ml-1">*</span></label>
-          <textarea rows="2" v-model="letterForm.legalBasis" placeholder="Perda No. 3 Tahun 2019…; Disposisi Kasatpol PP tanggal …" class="inp focus:ring-emerald-500/20"></textarea>
+          <label for="st-legal" class="lbl flex items-center"><span class="rown">2</span>Dasar Surat <span class="text-red-500 ml-1">*</span></label>
+          <textarea id="st-legal" rows="2" v-model="letterForm.legalBasis" placeholder="Perda No. 3 Tahun 2019…; Disposisi Kasatpol PP tanggal …" class="inp focus:ring-emerald-500/20"></textarea>
         </div>
         <div class="md:col-span-1">
-          <label class="lbl">Tanggal Surat <span class="text-red-500 ml-1">*</span></label>
-          <input type="date" v-model="letterForm.letterDate" class="inp focus:ring-emerald-500/20">
+          <label for="st-date" class="lbl">Tanggal Surat <span class="text-red-500 ml-1">*</span></label>
+          <input id="st-date" type="date" v-model="letterForm.letterDate" class="inp focus:ring-emerald-500/20">
         </div>
       </div>
 
-      <!-- Baris 3: Nama Kegiatan (Dropdown + Manual) -->
+      <!-- Baris 3: Nama Kegiatan (Dropdown + Manual) — PATCH #14 & #18 -->
       <div class="md:col-span-2">
-        <label class="lbl flex items-center"><span class="rown">3</span>Nama Kegiatan <span class="text-red-500 ml-1">*</span></label>
-        <select :value="presets.includes(letterForm.title) ? letterForm.title : '__MANUAL__'" 
-                @change="e => { 
-                    if (e.target.value === '__MANUAL__') {
-                        letterForm.title = ' '; 
-                        setTimeout(() => { letterForm.title = ''; document.getElementById('input-title-manual')?.focus(); }, 50);
-                    } else { letterForm.title = e.target.value; }
-                }" 
+        <label for="st-title" class="lbl flex items-center"><span class="rown">3</span>Nama Kegiatan <span class="text-red-500 ml-1">*</span></label>
+        <select id="st-title" :value="presets.includes(letterForm.title) ? letterForm.title : '__MANUAL__'" 
+                @change="onPresetChange" 
                 class="inp bg-slate-50 focus:bg-white cursor-pointer font-bold text-slate-700 py-3">
           <option value="" disabled>— Pilih nama kegiatan —</option>
           <option v-for="p in presets" :value="p">{{ p }}</option>
@@ -1075,43 +1115,43 @@
         </select>
         <div v-if="!presets.includes(letterForm.title)" class="mt-2 relative animate-fade-up">
           <i class="fa-solid fa-pen absolute left-3.5 top-3.5 text-emerald-500 text-sm"></i>
-          <input id="input-title-manual" v-model="letterForm.title" placeholder="Ketik nama kegiatan secara manual di sini..." class="inp !pl-10 font-bold border-emerald-400 focus:ring-emerald-500/30 bg-emerald-50/20 shadow-sm">
+          <input id="input-title-manual" v-model="letterForm.title" placeholder="Ketik nama kegiatan secara manual di sini..." aria-label="Nama kegiatan manual" class="inp !pl-10 font-bold border-emerald-400 focus:ring-emerald-500/30 bg-emerald-50/20 shadow-sm">
         </div>
       </div>
 
       <!-- Baris 4 & 5: Waktu Mulai & Selesai -->
       <div class="md:col-span-2 space-y-4">
         <div>
-          <label class="lbl flex items-center"><span class="rown">4</span>Waktu Mulai</label>
+          <label for="st-startDate" class="lbl flex items-center"><span class="rown">4</span>Waktu Mulai</label>
           <div class="grid grid-cols-2 gap-3">
-            <input type="date" v-model="letterForm.startDate" @change="letterForm.endDate < letterForm.startDate && (letterForm.endDate = letterForm.startDate)" class="inp bg-white shadow-sm">
-            <input type="time" v-model="letterForm.startTime" class="inp bg-white shadow-sm">
+            <input id="st-startDate" type="date" v-model="letterForm.startDate" @change="letterForm.endDate < letterForm.startDate && (letterForm.endDate = letterForm.startDate)" class="inp bg-white shadow-sm">
+            <input id="st-startTime" type="time" v-model="letterForm.startTime" aria-label="Waktu mulai" class="inp bg-white shadow-sm">
           </div>
         </div>
         <div>
-          <label class="lbl flex items-center"><span class="rown">5</span>Waktu Selesai</label>
+          <label for="st-endDate" class="lbl flex items-center"><span class="rown">5</span>Waktu Selesai</label>
           <div class="grid grid-cols-2 gap-3">
-            <input type="date" :min="letterForm.startDate" v-model="letterForm.endDate" class="inp bg-white shadow-sm">
-            <input type="time" v-model="letterForm.endTime" class="inp bg-white shadow-sm">
+            <input id="st-endDate" type="date" :min="letterForm.startDate" v-model="letterForm.endDate" class="inp bg-white shadow-sm">
+            <input id="st-endTime" type="time" v-model="letterForm.endTime" aria-label="Waktu selesai" class="inp bg-white shadow-sm">
           </div>
         </div>
       </div>
 
       <!-- Baris 6: Lokasi -->
       <div class="md:col-span-2">
-        <label class="lbl flex items-center"><span class="rown">6</span>Lokasi Tugas (Kecamatan → Desa → Nama Lokasi) <span class="text-red-500 ml-1">*</span></label>
+        <label for="st-kec" class="lbl flex items-center"><span class="rown">6</span>Lokasi Tugas (Kecamatan → Desa → Nama Lokasi) <span class="text-red-500 ml-1">*</span></label>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <select v-model="letterForm.location" @change="letterForm.village = ''" class="inp bg-slate-50 focus:bg-white cursor-pointer">
+          <select id="st-kec" v-model="letterForm.location" @change="letterForm.village = ''" class="inp bg-slate-50 focus:bg-white cursor-pointer">
             <option v-for="r in data.regions" :value="r.name">{{ r.name }} (Risiko: {{ r.risk }})</option>
           </select>
-          <select v-if="villageOptions.length" v-model="letterForm.village" class="inp bg-slate-50 focus:bg-white cursor-pointer">
+          <select v-if="villageOptions.length" id="st-village" v-model="letterForm.village" class="inp bg-slate-50 focus:bg-white cursor-pointer" aria-label="Desa atau kelurahan">
             <option value="">— Pilih Desa/Kelurahan —</option>
             <option v-for="v in villageOptions" :value="v.name">{{ v.name }}</option>
           </select>
-          <input v-else v-model="letterForm.village" placeholder="Isi Desa/Kelurahan (belum ada di master)" class="inp">
+          <input v-else id="st-village" v-model="letterForm.village" placeholder="Isi Desa/Kelurahan (belum ada di master)" aria-label="Desa atau kelurahan manual" class="inp">
         </div>
         <div class="mt-3">
-          <input v-model="letterForm.locationName" placeholder="Nama lokasi spesifik: Alun-alun, Pasar Pon, Jl. …" class="inp font-semibold focus:ring-emerald-500/20">
+          <input id="st-locationName" v-model="letterForm.locationName" placeholder="Nama lokasi spesifik: Alun-alun, Pasar Pon, Jl. …" aria-label="Nama lokasi spesifik" class="inp font-semibold focus:ring-emerald-500/20">
         </div>
         <div class="mt-3 p-2.5 bg-blue-50 border border-blue-100 rounded-xl text-[11px] text-blue-800 flex items-center flex-wrap gap-1.5 shadow-sm">
           <i class="fa-solid fa-location-dot text-blue-500"></i> 
@@ -1129,7 +1169,7 @@
           <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
             <div class="relative flex-1">
               <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-              <input v-model="petugasQuery" placeholder="Cari nama petugas…" class="inp !pl-8 bg-white shadow-sm">
+              <input v-model="petugasQuery" placeholder="Cari nama petugas…" aria-label="Cari petugas" class="inp !pl-8 bg-white shadow-sm">
             </div>
             <span class="text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-200 rounded-xl px-3 py-2 shrink-0 shadow-sm flex items-center gap-1.5"><i class="fa-solid fa-users"></i> {{ letterForm.personnel.length }} terpilih</span>
           </div>
@@ -1145,13 +1185,13 @@
             <p class="text-[11px] font-extrabold text-emerald-950 uppercase tracking-wider mb-2"><i class="fa-solid fa-list-ol mr-1"></i> Susunan Personel</p>
             <div v-for="(p, idx) in letterForm.personnel" :key="p.name + idx" class="flex gap-2 items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex-wrap sm:flex-nowrap hover:border-emerald-200 transition-colors">
               <span class="text-xs font-bold flex-1 min-w-[130px] text-slate-800">{{ idx + 1 }}. {{ p.name }}</span>
-              <input v-model="p.rank" placeholder="Pangkat / Gol" class="inp sm:!w-32 !py-1.5 bg-slate-50 focus:bg-white text-[11px]">
-              <select v-model="p.role" class="inp sm:!w-36 font-semibold !py-1.5 bg-slate-50 focus:bg-white text-[11px] cursor-pointer"><option>Ketua Tim</option><option>Anggota Regu</option><option>PPNS / Penyidik</option><option>Dokumentasi</option></select>
-              <button @click="letterForm.personnel.splice(idx, 1)" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+              <input v-model="p.rank" placeholder="Pangkat / Gol" aria-label="Pangkat" class="inp sm:!w-32 !py-1.5 bg-slate-50 focus:bg-white text-[11px]">
+              <select v-model="p.role" aria-label="Peran dalam tim" class="inp sm:!w-36 font-semibold !py-1.5 bg-slate-50 focus:bg-white text-[11px] cursor-pointer"><option>Ketua Tim</option><option>Anggota Regu</option><option>PPNS / Penyidik</option><option>Dokumentasi</option></select>
+              <button @click="letterForm.personnel.splice(idx, 1)" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Hapus" aria-label="Hapus petugas"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
             </div>
           </div>
           <div class="flex gap-2 pt-2">
-            <input v-model="manualPetugas" @keydown.enter.prevent="addManualPetugas" placeholder="Petugas tidak ada di daftar? Ketik nama…" class="inp flex-1 bg-white shadow-sm">
+            <input v-model="manualPetugas" @keydown.enter.prevent="addManualPetugas" placeholder="Petugas tidak ada di daftar? Ketik nama…" aria-label="Tambah petugas manual" class="inp flex-1 bg-white shadow-sm">
             <button @click="addManualPetugas" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shrink-0 transition-colors shadow-sm"><i class="fa-solid fa-plus mr-1"></i> Tambah</button>
           </div>
         </div>
@@ -1181,20 +1221,20 @@
 
       <!-- Baris 9: Catatan -->
       <div class="md:col-span-2">
-        <label class="lbl flex items-center"><span class="rown">9</span>Catatan Tambahan</label>
-        <textarea rows="2" v-model="letterForm.notes" placeholder="Catatan tambahan: titik kumpul & jam apel, hal diwaspadai…" class="inp focus:ring-emerald-500/20"></textarea>
+        <label for="st-notes" class="lbl flex items-center"><span class="rown">9</span>Catatan Tambahan</label>
+        <textarea id="st-notes" rows="2" v-model="letterForm.notes" placeholder="Catatan tambahan: titik kumpul & jam apel, hal diwaspadai…" class="inp focus:ring-emerald-500/20"></textarea>
       </div>
 
       <!-- Detail Pelengkap -->
       <div class="md:col-span-2 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/30">
-        <button type="button" @click="showExtra = !showExtra" class="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-100 transition-colors text-left group">
+        <button type="button" @click="showExtra = !showExtra" class="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-100 transition-colors text-left group" aria-expanded="true">
           <span class="text-xs font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-sliders text-emerald-600 group-hover:rotate-90 transition-transform"></i> Detail Pelengkap <span class="font-normal text-slate-400 hidden sm:inline">— penandatangan &amp; maksud tujuan</span></span>
           <i class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-300" :class="showExtra ? 'rotate-180' : ''"></i>
         </button>
         <div v-if="showExtra" class="p-5 space-y-5 border-t border-slate-200 bg-white animate-fade-up">
           <div>
             <label class="lbl">Pejabat Penandatangan (can_sign)</label>
-            <select v-model="letterForm.signerName" class="inp font-semibold bg-slate-50 focus:bg-white cursor-pointer"><option v-for="s in data.signers" :value="s.name">{{ s.name }} — {{ s.position }}</option></select>
+            <select v-model="letterForm.signerName" aria-label="Pejabat penandatangan" class="inp font-semibold bg-slate-50 focus:bg-white cursor-pointer"><option v-for="s in data.signers" :value="s.name">{{ s.name }} — {{ s.position }}</option></select>
           </div>
           <div>
             <label class="lbl">Maksud &amp; Tujuan</label>
@@ -1216,7 +1256,7 @@
 </div>
 
 <!-- ===== MODAL LAPORAN DINAMIS ===== -->
-<div v-if="reportForm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
+<div v-if="reportForm" @click.self="reportForm = null" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] w-full max-w-3xl p-5 sm:p-7 space-y-5 my-4 max-h-[94vh] overflow-y-auto border border-white/20">
     <div class="flex justify-between items-start border-b border-slate-100 pb-4">
       <div class="flex gap-3">
@@ -1226,12 +1266,11 @@
           <p class="text-xs text-slate-500 mt-1">Form dinamis — field menyesuaikan Jenis Kegiatan ST.</p>
         </div>
       </div>
-      <button @click="reportForm = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <button @click="reportForm = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all" aria-label="Tutup modal"><i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i></button>
     </div>
     
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
       
-      <!-- 1. Pilih ST (Full Width) -->
       <div class="md:col-span-2">
         <label class="lbl">Pilih Surat Tugas (ST) Terbit <span class="text-red-500">*</span></label>
         <select v-model="reportForm.letterId" @change="reportForm.activityCode = issuedLetters.find(l => l.id === reportForm.letterId)?.activityCode" class="inp font-semibold bg-slate-50 focus:bg-white cursor-pointer">
@@ -1239,7 +1278,6 @@
         </select>
       </div>
       
-      <!-- 2. Waktu & Lokasi -->
       <div>
         <label class="lbl">Waktu Pelaksanaan Aktual</label>
         <input type="datetime-local" v-model="reportForm.actualTime" class="inp">
@@ -1249,7 +1287,6 @@
         <input v-model="reportForm.actualLocation" placeholder="Alun-alun, Jl. …" class="inp">
       </div>
       
-      <!-- 3. Uraian & Hasil (Full Width) -->
       <div class="md:col-span-2">
         <label class="lbl">Uraian Pelaksanaan Kegiatan <span class="text-red-500">*</span></label>
         <textarea rows="3" v-model="reportForm.description" placeholder="Kronologis jalannya kegiatan…" class="inp focus:ring-emerald-500/20"></textarea>
@@ -1259,7 +1296,6 @@
         <textarea rows="3" v-model="reportForm.results" placeholder="Apa yang ditemukan dan tindakan apa yang diambil…" class="inp focus:ring-emerald-500/20"></textarea>
       </div>
       
-      <!-- 4. FIELD DINAMIS (Berdasarkan Jenis Kegiatan) -->
       <div class="md:col-span-2 p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
         <p class="text-[11px] font-extrabold text-emerald-800 uppercase tracking-widest mb-3"><i class="fa-solid fa-list-check mr-1"></i> Data Spesifik Kegiatan</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1279,7 +1315,6 @@
         </div>
       </div>
       
-      <!-- 5. Kendala & Rekomendasi -->
       <div class="md:col-span-2">
         <label class="lbl">Kendala Lapangan</label>
         <input v-model="reportForm.obstacles" class="inp" placeholder="Nihil / Cuaca / dst">
@@ -1289,10 +1324,9 @@
         <input v-model="reportForm.recommendation" class="inp" placeholder="Saran untuk ke depan">
       </div>
       
-      <!-- 6. Upload Lampiran (UI Drag & Drop) -->
       <div class="md:col-span-2">
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 border-dashed text-center transition-colors relative group" :class="isUploading ? 'opacity-50 cursor-wait' : 'hover:bg-slate-100 cursor-pointer'">
-          <input type="file" multiple :disabled="isUploading" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="handleFileUpload">
+          <input type="file" multiple :disabled="isUploading" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="handleFileUpload" aria-label="Unggah lampiran">
           
           <i v-if="!isUploading" class="fa-solid fa-cloud-arrow-up text-3xl text-blue-500 mb-2 group-hover:-translate-y-1 transition-transform"></i>
           <i v-else class="fa-solid fa-circle-notch fa-spin text-3xl text-blue-500 mb-2"></i>
@@ -1301,14 +1335,13 @@
           <p class="text-[11px] text-slate-500 mt-1">Mendukung format gambar (JPG/PNG) atau PDF. Maks 3MB/file.</p>
         </div>
         
-        <!-- List file yang sudah dilampirkan -->
         <div class="flex flex-wrap gap-2 mt-3" v-if="reportForm.evidenceList && reportForm.evidenceList.length">
           <span v-for="(ev, i) in reportForm.evidenceList" :key="i" class="px-3 py-1.5 bg-white text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 shadow-sm flex items-center gap-2">
             <i class="fa-regular fa-file text-blue-500"></i> 
-            <a :href="ev.startsWith('http') ? ev : '#'" target="_blank" class="truncate max-w-[150px] hover:text-blue-600 hover:underline">
+            <a :href="ev.startsWith('http') ? ev : '#'" target="_blank" class="truncate max-w-[150px] hover:text-blue-600 hover:underline" :aria-label="'Buka lampiran ' + (i+1)">
               {{ ev.startsWith('http') ? 'Lihat Dokumen' : ev }}
             </a>
-            <button @click="reportForm.evidenceList.splice(i, 1)" class="text-slate-300 hover:text-red-500 font-bold ml-1">×</button>
+            <button @click="reportForm.evidenceList.splice(i, 1)" class="text-slate-300 hover:text-red-500 font-bold ml-1" aria-label="Hapus lampiran">×</button>
           </span>
         </div>
       </div>
@@ -1324,14 +1357,14 @@
 </div>
 
 <!-- ===== MODAL TINDAK LANJUT ===== -->
-<div v-if="fuForm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+<div v-if="fuForm" @click.self="fuForm = null; editingFuId = null" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] w-full max-w-2xl p-5 sm:p-7 space-y-5 my-4 max-h-[94vh] overflow-y-auto border border-white/20">
     <div class="flex justify-between items-start border-b border-slate-100 pb-4">
       <div class="flex gap-3">
         <div class="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-list-check text-lg"></i></div>
         <div><h3 class="font-extrabold text-xl text-slate-800">{{ editingFuId ? 'Ubah Tindak Lanjut' : 'Tindak Lanjut Baru' }}</h3><p class="text-xs text-slate-500 mt-1">Tentukan aksi lanjutan, PIC, dan tenggat waktu.</p></div>
       </div>
-      <button @click="fuForm = null; editingFuId = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <button @click="fuForm = null; editingFuId = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all" aria-label="Tutup modal"><i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i></button>
     </div>
     
     <div><label class="lbl">Laporan Sumber</label><select v-model="fuForm.reportId" class="inp bg-slate-50 cursor-pointer"><option value="">— Tanpa laporan (manual) —</option><option v-for="r in data.reports" :value="r.id">{{ r.code }} — {{ r.activityName }}</option></select></div>
@@ -1354,25 +1387,21 @@
 </div>
 
 <!-- ===== DETAIL ST (PREVIEW SURAT A4) ===== -->
-<div v-if="detailLetter" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
+<div v-if="detailLetter" @click.self="detailLetter = null" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-slate-50 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col my-4 max-h-[95vh] border border-white/20">
     
-    <!-- Header Modal -->
     <div class="flex justify-between items-center gap-4 p-4 sm:px-6 bg-white border-b border-slate-200 shrink-0 rounded-t-2xl">
       <div>
         <h3 class="font-extrabold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-file-signature text-emerald-600"></i> Pratinjau Surat Tugas</h3>
         <p class="text-xs text-slate-500 mt-1">Pastikan data sudah benar sebelum dicetak.</p>
       </div>
-      <button @click="detailLetter = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-xl transition-all"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <button @click="detailLetter = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-xl transition-all" aria-label="Tutup"><i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i></button>
     </div>
 
-    <!-- Area Preview (Scroll) -->
     <div class="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar bg-slate-200/50">
       
-      <!-- Kertas A4 -->
       <div class="bg-white mx-auto shadow-md border border-slate-300 w-full max-w-[210mm] min-h-[297mm] p-8 sm:p-12 text-slate-900 font-serif text-[11px] leading-relaxed relative">
         
-        <!-- Kop Surat -->
         <div class="flex items-center gap-4 border-b-[3px] border-black pb-3 mb-1">
           <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBkPSJNNTAgMTBhNDAgNDAgMCAwIDAgMCA4MCA0MCA0MCAwIDAgMCAwLTgwIiBmaWxsPSIjMDY0ZTNkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IndoaXRlIj5UPC90ZXh0Pjwvc3ZnPg==" class="w-16 h-16 object-contain" alt="Logo">
           <div class="text-center flex-1 uppercase">
@@ -1383,13 +1412,11 @@
         </div>
         <div class="border-b border-black mb-6"></div>
 
-        <!-- Judul Surat -->
         <div class="text-center mb-6">
           <h3 class="text-base font-bold underline tracking-wider uppercase">Surat Tugas</h3>
           <p class="mt-1">Nomor: {{ detailLetter.officialNumber || detailLetter.draftNumber || '-' }}</p>
         </div>
 
-        <!-- Badan Surat -->
         <div class="space-y-3 text-justify">
           <div>
             <p class="font-bold mb-1">Dasar:</p>
@@ -1403,7 +1430,6 @@
           <p class="text-center font-bold my-4">Memberikan Tugas :</p>
           <p>Kepada Petugas Satpol PPK yang namanya tercantum di bawah ini :</p>
 
-          <!-- Tabel Personel (5 Kolom Baru) -->
           <table class="w-full border-collapse border border-black mt-2 mb-4">
             <thead>
               <tr class="bg-slate-50">
@@ -1452,10 +1478,9 @@
           <p class="mt-6">Demikian Surat Tugas ini dibuat untuk dilaksanakan dengan penuh rasa tanggung jawab.</p>
         </div>
 
-        <!-- Tanda Tangan (Tanpa Jarak Kosong Berlebih) -->
         <div class="mt-10 ml-auto w-[280px] text-left">
           <p>Ditetapkan di : Trenggalek</p>
-          <p class="mb-4">Pada tanggal : {{ new Date(detailLetter.letterDate || detailLetter.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) }}</p>
+          <p class="mb-4">Pada tanggal : {{ new Date((detailLetter.letterDate || detailLetter.startDate) + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) }}</p>
           <p class="font-bold uppercase">Kepala Satuan<br>Polisi Pamong Praja dan Pemadam<br>Kebakaran Kabupaten Trenggalek</p>
           <div class="h-16"></div>
           <p class="font-bold underline">{{ detailLetter.signerName || '-' }}</p>
@@ -1466,22 +1491,22 @@
       </div>
     </div>
 
-    <!-- Footer Aksi (Sticky) -->
     <div class="p-4 bg-white border-t border-slate-200 rounded-b-2xl shrink-0 flex flex-col sm:flex-row justify-between items-center gap-4">
       <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto">
         <span :class="(LETTER_STATUS[detailLetter.status] || {}).cls" class="inline-flex px-3 py-1.5 rounded-full text-xs font-extrabold ring-1 shadow-sm">{{ (LETTER_STATUS[detailLetter.status] || {}).label || detailLetter.status }}</span>
         <span class="text-[11px] text-slate-500 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200"><i class="fa-solid fa-clock-rotate-left"></i> Dibuat: {{ detailLetter.createdBy || '-' }}</span>
       </div>
       <div class="flex gap-2 flex-wrap justify-end w-full sm:w-auto">
-        <button v-if="role === 'ADMIN'" @click="confirmDel = { kind: 'letter', id: detailLetter.id, label: 'Surat Tugas ' + detailLetter.code, code: detailLetter.code }" class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold rounded-xl transition-colors"><i class="fa-solid fa-trash"></i></button>
-        <button v-if="['ISSUED','READY_TO_ISSUE','PENDING_APPROVAL','DRAFT'].includes(detailLetter.status) && canCreateLetter" @click="patchLetterStatus(detailLetter, 'CANCELLED', 'ST dibatalkan.', 'Surat Tugas dibatalkan.')" class="px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-colors" title="Batalkan ST"><i class="fa-solid fa-ban"></i></button>
+        <button v-if="role === 'ADMIN'" @click="confirmDel = { kind: 'letter', id: detailLetter.id, label: 'Surat Tugas ' + detailLetter.code, code: detailLetter.code }" class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold rounded-xl transition-colors" aria-label="Hapus ST"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+        <button v-if="['ISSUED','READY_TO_ISSUE','PENDING_APPROVAL','DRAFT'].includes(detailLetter.status) && canCreateLetter" @click="patchLetterStatus(detailLetter, 'CANCELLED', 'ST dibatalkan.', 'Surat Tugas dibatalkan.')" class="px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-colors" title="Batalkan ST" aria-label="Batalkan ST"><i class="fa-solid fa-ban" aria-hidden="true"></i></button>
         <button @click="doPrint(detailLetter)" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shadow-sm transition-colors"><i class="fa-solid fa-print mr-1"></i> Cetak PDF</button>
         <template v-if="detailLetter.status === 'PENDING_APPROVAL' && role === 'PIMPINAN'">
           <button @click="openNote('rejectLetter', detailLetter.id, 'Kembalikan ' + detailLetter.code + ' untuk revisi', true)" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors">Revisi</button>
           <button @click="openNote('approveLetter', detailLetter.id, 'Setujui & Terbitkan ' + detailLetter.code, false)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors">Setujui</button>
         </template>
-        <button v-if="['DRAFT','REJECTED'].includes(detailLetter.status) && canCreateLetter" @click="openEditLetter(detailLetter); detailLetter = null" class="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold rounded-xl shadow-sm transition-colors"><i class="fa-solid fa-pen"></i></button>
-        <button v-if="detailLetter.status === 'ISSUED'" @click="detailLetter = null; tab = 'reports'; openNewReport()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors">Buat Laporan</button>
+        <button v-if="['DRAFT','REJECTED'].includes(detailLetter.status) && canCreateLetter" @click="openEditLetter(detailLetter); detailLetter = null" class="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold rounded-xl shadow-sm transition-colors" aria-label="Edit ST"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+        <!-- PATCH #19: pre-select ST saat buat laporan -->
+        <button v-if="detailLetter.status === 'ISSUED'" @click="openNewReport(detailLetter.id); detailLetter = null; tab = 'reports'" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors">Buat Laporan</button>
         <button @click="detailLetter = null" class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-colors">Tutup</button>
       </div>
     </div>
@@ -1489,7 +1514,7 @@
 </div>
 
 <!-- ===== DETAIL LAPORAN ===== -->
-<div v-if="detailReport" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
+<div v-if="detailReport" @click.self="detailReport = null" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] w-full max-w-4xl p-5 sm:p-7 space-y-5 my-4 max-h-[94vh] overflow-y-auto border border-white/20 custom-scrollbar text-sm">
     
     <div class="flex justify-between items-start gap-4 border-b border-slate-100 pb-4">
@@ -1497,7 +1522,7 @@
         <h3 class="font-extrabold text-xl text-slate-800">Laporan {{ detailReport.code }} — {{ detailReport.activityName }}</h3>
         <p class="text-xs text-slate-500 mt-1 font-mono"><i class="fa-solid fa-link text-slate-400"></i> ST {{ detailReport.stNumber || '-' }} · Pelapor: {{ detailReport.createdBy || '-' }} · {{ fmtDateTime(detailReport.actualTime) }}</p>
       </div>
-      <button @click="detailReport = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <button @click="detailReport = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all" aria-label="Tutup"><i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i></button>
     </div>
     
     <div class="flex flex-wrap gap-2 items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
@@ -1506,7 +1531,6 @@
       <span v-if="detailReport.verifiedBy" class="text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg font-semibold shadow-sm"><i class="fa-solid fa-user-check mr-1"></i> Diverifikasi: <b>{{ detailReport.verifiedBy }}</b></span>
     </div>
 
-    <!-- Ringkasan Dinamis -->
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
         <p class="text-slate-400 font-bold uppercase tracking-wider text-[10px] mb-1 flex items-center gap-1"><i class="fa-solid fa-user-xmark text-red-500"></i> Temuan / Pelanggar</p>
@@ -1554,7 +1578,6 @@
       <p class="text-amber-800 mt-1 leading-relaxed text-[13px] whitespace-pre-wrap">{{ detailReport.verificationNote }}</p>
     </div>
 
-    <!-- Lampiran (Bisa diunduh/dilihat) -->
     <div>
       <p class="font-bold text-sm mb-3 text-slate-800"><i class="fa-solid fa-paperclip text-slate-400 mr-1"></i> Berkas Lampiran</p>
       <div class="flex flex-wrap gap-2">
@@ -1601,14 +1624,14 @@
 </div>
 
 <!-- ===== MODAL MASTER ===== -->
-<div v-if="masterForm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+<div v-if="masterForm" @click.self="masterForm = null" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] w-full max-w-2xl p-5 sm:p-7 space-y-5 my-4 max-h-[94vh] overflow-y-auto border border-white/20">
     <div class="flex justify-between items-start border-b border-slate-100 pb-4">
       <div class="flex gap-3">
         <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-database text-lg"></i></div>
         <div><h3 class="font-extrabold text-xl text-slate-800">{{ masterForm.id ? 'Ubah' : 'Tambah' }} Master</h3><p class="text-xs text-slate-500 mt-1">Data Referensi: {{ MASTER_DEFS[masterForm.sub].label }}</p></div>
       </div>
-      <button @click="masterForm = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <button @click="masterForm = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all" aria-label="Tutup modal"><i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i></button>
     </div>
     
     <div class="space-y-4">
@@ -1620,7 +1643,10 @@
           <span class="text-xs font-bold text-amber-900"><i class="fa-solid fa-award mr-1"></i> Pejabat berwenang menandatangani ST</span>
         </label>
         
-        <select v-else-if="f.options" v-model="masterForm.values[f.name]" class="inp bg-slate-50 focus:bg-white cursor-pointer"><option v-for="o in f.options">{{ o }}</option></select>
+        <!-- PATCH #23: dukungan {value, label} untuk options -->
+        <select v-else-if="f.options" v-model="masterForm.values[f.name]" class="inp bg-slate-50 focus:bg-white cursor-pointer">
+          <option v-for="o in f.options" :value="typeof o === 'object' ? o.value : o">{{ typeof o === 'object' ? o.label : o }}</option>
+        </select>
         
         <textarea v-else-if="f.type === 'textarea'" rows="3" v-model="masterForm.values[f.name]" :placeholder="f.placeholder" class="inp focus:ring-emerald-500/20"></textarea>
         
@@ -1636,7 +1662,7 @@
 </div>
 
 <!-- ===== MODAL CATATAN AKSI ===== -->
-<div v-if="noteAction" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[60] flex items-center justify-center p-3">
+<div v-if="noteAction" @click.self="noteAction = null" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[60] flex items-center justify-center p-3">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-lg p-6 sm:p-7 space-y-5 border border-white/20 animate-fade-up">
     <div class="flex justify-between items-start pb-3 border-b border-slate-100">
       <div>
@@ -1647,7 +1673,7 @@
         <p v-if="noteAction.kind === 'approveLetter'" class="text-xs text-slate-500 mt-2 leading-relaxed bg-slate-50 p-2 rounded-lg"><i class="fa-solid fa-stamp text-amber-500 mr-1"></i> Satu langkah: tanda tangan pimpinan (can_sign) sekaligus penerbitan nomor resmi.</p>
         <p v-if="noteAction.kind === 'verifyReport'" class="text-xs text-slate-500 mt-2 leading-relaxed bg-slate-50 p-2 rounded-lg"><i class="fa-solid fa-list-check text-emerald-500 mr-1"></i> Otomatis membuat tindak lanjut dari rekomendasi laporan.</p>
       </div>
-      <button @click="noteAction = null" class="text-slate-400 hover:text-red-500 p-2 rounded-xl transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <button @click="noteAction = null" class="text-slate-400 hover:text-red-500 p-2 rounded-xl transition-colors" aria-label="Tutup"><i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i></button>
     </div>
     
     <div>
@@ -1665,7 +1691,7 @@
 </div>
 
 <!-- ===== KONFIRMASI HAPUS ===== -->
-<div v-if="confirmDel" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[60] flex items-center justify-center p-3">
+<div v-if="confirmDel" @click.self="confirmDel = null" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[60] flex items-center justify-center p-3">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-md p-6 sm:p-7 space-y-5 border border-white/20">
     <div class="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-2 animate-shake">
       <i class="fa-solid fa-triangle-exclamation text-3xl text-red-500"></i>
@@ -1681,13 +1707,10 @@
   </div>
 </div>
 
-<!-- ========================================== -->
-<!-- ⬇️ TAG PENUTUP & MOBILE NAV ⬇️ -->
-<!-- ========================================== -->
     </main>
   </div>
 
-  <!-- Mobile nav (Lebih Modern) -->
+  <!-- Mobile nav -->
   <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg text-slate-400 border-t border-slate-800 flex justify-around px-2 pb-safe pt-2 z-40 shadow-[0_-5px_20px_rgba(0,0,0,0.1)]">
     <button v-for="n in navItems" :key="n.key" @click="tab = n.key" :class="tab === n.key ? 'text-emerald-400 -translate-y-1' : 'hover:text-slate-200'" class="relative flex flex-col items-center text-[10px] px-3 py-1.5 transition-all duration-300">
       <div v-if="tab === n.key" class="absolute -top-3 w-8 h-1 bg-emerald-400 rounded-b-full shadow-[0_0_10px_rgba(52,211,153,0.8)]"></div>
@@ -1708,7 +1731,8 @@
   <div id="print-area" style="display:none"></div>
   
 <script>
-const { createApp, ref, computed, onMounted } = Vue;
+// PATCH #2: tambah nextTick & watch
+const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
 
 // ==========================================
 // KONSTANTA GLOBAL
@@ -1734,7 +1758,7 @@ const REPORT_STATUS = {
   CLOSED: { label: "Ditutup", cls: "bg-teal-100 text-teal-800 ring-teal-200" },
 };
 
-const SPEC_LABELS = { route: "Rute / Titik Pos / Objek", targetAudience: "Target Sasaran", materialTopic: "Materi Penyuluhan", threatIssue: "Isu / Potensi Kerawanan", riskLevel: "Tingkat Risiko", perdaRef: "Dasar Perda", objectTarget: "Objek Ditertibkan", massEstimate: "Estimasi Massa", tacticalGear: "Peralatan Dalmas" };
+// PATCH #24: hapus SPEC_LABELS & workflowSteps (dead code)
 const ACTION_OPTIONS = ["Pembinaan / himbauan", "Teguran lisan", "Teguran tertulis", "Surat pernyataan", "Penyitaan sarana/barang bukti", "Pembongkaran", "Penyegelan sementara", "Diserahkan ke PPNS / instansi terkait", "Nihil — situasi kondusif"];
 
 const FORM_TEMPLATES = {
@@ -1760,6 +1784,34 @@ const FORM_TEMPLATES = {
   ]
 };
 
+// ─────────────────────────────────────────────────────────────
+// PATCH #3: Helper baru (escape, tanggal lokal, CSV, pagination)
+// ─────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s === null || s === undefined ? "" : s)
+    .replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function localDateStr(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function localDateTimeStr(d = new Date()) {
+  return localDateStr(d) + "T" + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
+function csvCell(v) {
+  const raw = String(v === null || v === undefined ? "" : v);
+  const safe = /^[=+\-@]/.test(raw) ? "'" + raw : raw;
+  return '"' + safe.replaceAll('"', '""') + '"';
+}
+
+function paginationWindow(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, null, total];
+  if (current >= total - 3) return [1, null, total - 4, total - 3, total - 2, total - 1, total];
+  return [1, null, current - 1, current, current + 1, null, total];
+}
+
 function fmtDate(s) { 
   if (!s) return "-"; 
   const d = new Date(String(s).length <= 10 ? s + "T00:00:00" : s); 
@@ -1770,8 +1822,16 @@ function fmtDateTime(s) {
   const d = new Date(s); 
   return isNaN(d) ? s : d.toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); 
 }
-function genOfficial() { 
-  return "800/" + (100 + Math.floor(Math.random() * 800)) + "/406.02/" + new Date().getFullYear(); 
+
+// PATCH #4: peringatan server-side
+function genOfficial() {
+  // ⚠️ TEMPORARY CLIENT-SIDE FALLBACK.
+  // Untuk produksi: pindahkan ke backend (apiBootstrap/apiCreateLetter) dengan:
+  //   • LockService untuk mencegah race condition
+  //   • Counter atomik di sheet khusus (baca nomor terakhir + increment dalam transaksi)
+  //   • Validasi keunikan nomor sebelum disimpan
+  console.warn("[SECURITY] genOfficial() dipanggil di client — pindahkan ke server untuk produksi.");
+  return "800/" + (100 + Math.floor(Math.random() * 800)) + "/406.02/" + new Date().getFullYear();
 }
 
 createApp({
@@ -1791,12 +1851,26 @@ createApp({
 
     const flash = ref({ text: "", type: "success" }); 
     const busy = ref(false);
+    // PATCH #5: busyMode untuk membedakan save vs load
+    const busyMode = ref("save");
     const isUploading = ref(false);
 
-    // ----- STATE FILTER & PENCARIAN -----
-    const qLetter = ref(""), fLetterStatus = ref("ALL"), fLetterAct = ref("ALL");
+    // ----- STATE FILTER & PENCARIAN (PATCH #6: debounce) -----
+    const qLetter = ref(""), qLetterInput = ref("");
+    const fLetterStatus = ref("ALL"), fLetterAct = ref("ALL");
     const fLetterClass = ref("ALL"); 
-    const qReport = ref(""), fReportStatus = ref("ALL"), fFuStatus = ref("ALL"), qMaster = ref("");
+    const qReport = ref(""), qReportInput = ref("");
+    const fReportStatus = ref("ALL"), fFuStatus = ref("ALL"), qMaster = ref("");
+
+    let _qLetterTimer = null, _qReportTimer = null;
+    watch(qLetterInput, (v) => {
+      clearTimeout(_qLetterTimer);
+      _qLetterTimer = setTimeout(() => { qLetter.value = v; resetPage("letters"); }, 250);
+    });
+    watch(qReportInput, (v) => {
+      clearTimeout(_qReportTimer);
+      _qReportTimer = setTimeout(() => { qReport.value = v; resetPage("reports"); }, 250);
+    });
     
     const d = new Date();
     const filterYear = ref(d.getFullYear());
@@ -1834,20 +1908,52 @@ createApp({
         google.script.run.withSuccessHandler(resolve).withFailureHandler((err) => reject(new Error(err && err.message ? err.message : "Gagal memanggil server")))[fn].apply(null, args);
       });
     }
-    async function refresh() {
-      try { data.value = await runGas("apiBootstrap"); loadError.value = ""; } 
-      catch (e) { loadError.value = e.message; } 
-      finally { loading.value = false; }
+
+    // PATCH #7: refresh & api dengan error handling benar
+    async function refresh(throwOnError = false) {
+      try { 
+        data.value = await runGas("apiBootstrap"); 
+        loadError.value = ""; 
+      } catch (e) { 
+        loadError.value = e.message; 
+        if (throwOnError) throw e;
+      } finally { 
+        loading.value = false; 
+      }
     }
-    async function api(fn) {
+    async function api(fn, ...args) {
       busy.value = true;
-      try { const res = await runGas.apply(null, arguments); await refresh(); return res; } 
-      catch (e) { showFlash(e.message, "error"); return null; } 
-      finally { busy.value = false; }
+      busyMode.value = "save";
+      try {
+        const res = await runGas(fn, ...args);
+        busyMode.value = "load";
+        try { await refresh(true); } 
+        catch (e) { showFlash("Perubahan tersimpan, tapi gagal memuat ulang data: " + e.message, "error"); }
+        return res;
+      } catch (e) {
+        showFlash(e.message, "error");
+        return null;
+      } finally {
+        busy.value = false;
+      }
     }
+
+    // PATCH #8: closeTopModal + Esc + guard
+    function closeTopModal() {
+      if (confirmDel.value) { confirmDel.value = null; return; }
+      if (noteAction.value) { noteAction.value = null; return; }
+      if (masterForm.value) { masterForm.value = null; return; }
+      if (fuForm.value) { fuForm.value = null; editingFuId.value = null; return; }
+      if (reportForm.value) { reportForm.value = null; return; }
+      if (letterForm.value) { letterForm.value = null; return; }
+      if (detailReport.value) { detailReport.value = null; return; }
+      if (detailLetter.value) { detailLetter.value = null; return; }
+    }
+
     onMounted(() => {
       const pre = document.getElementById('preloader');
       if (pre) { pre.style.opacity = '0'; setTimeout(() => { if (pre.parentNode) pre.parentNode.removeChild(pre); }, 350); }
+      window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTopModal(); });
       refresh();
     });
 
@@ -1884,8 +1990,6 @@ createApp({
       { key: "rekap", label: "Rekap & Statistik", short: "Rekap", icon: "fa-solid fa-chart-column", badge: 0 },
     ]);
 
-    const workflowSteps = ["1. Koordinator / Pimpinan menyusun ST", "2. Pimpinan menyetujui = langsung terbit nomor resmi", "3. Petugas melapor hasil lapangan", "4. Koordinator memverifikasi laporan", "5. Tindak lanjut ditugaskan ke PIC"];
-
     function isOverdue(f) { if (!f.deadline || f.status === "SELESAI") return false; const t = new Date(); t.setHours(0,0,0,0); return new Date(f.deadline + "T00:00:00") < t; }
     function countLettersByAct(code) { return data.value ? data.value.letters.filter(l => l.activityCode === code).length : 0; }
     function countLetterStatus(k) { return data.value ? data.value.letters.filter(l => l.status === k).length : 0; }
@@ -1910,7 +2014,7 @@ createApp({
         d.letters.filter(l => l.status === "REJECTED").forEach(l => items.push({ key: l.id, type: "ST Perlu Revisi", title: l.code + " — " + l.title, status: "Dikembalikan Pimpinan untuk direvisi", go: () => { tab.value = "letters"; detailLetter.value = l; } }));
       }
       if (["KOORDINATOR", "ADMIN"].includes(role.value)) d.reports.filter(r => r.status === "SUBMITTED").forEach(r => items.push({ key: r.id, type: "Verifikasi Laporan", title: r.code + " — " + r.activityName, status: "Menunggu verifikasi koordinator", go: () => { tab.value = "reports"; detailReport.value = r; } }));
-      if (["PETUGAS", "KOORDINATOR", "ADMIN"].includes(role.value)) lettersWithoutReport.value.forEach(l => items.push({ key: l.id, type: "Belum Ada Laporan", title: l.code + " — " + l.title, status: "ST terbit, laporan belum dibuat", go: () => { tab.value = "reports"; openNewReport(); } }));
+      if (["PETUGAS", "KOORDINATOR", "ADMIN"].includes(role.value)) lettersWithoutReport.value.forEach(l => items.push({ key: l.id, type: "Belum Ada Laporan", title: l.code + " — " + l.title, status: "ST terbit, laporan belum dibuat", go: () => { tab.value = "reports"; openNewReport(l.id); } }));
       d.followUps.filter(f => isOverdue(f)).forEach(f => items.push({ key: f.id, type: "Tindak Lanjut Terlambat", title: f.code + " — " + String(f.actionRequired || "").slice(0, 70), status: "Lewat tenggat " + fmtDate(f.deadline), go: () => { tab.value = "followups"; } }));
       return items.slice(0, 8);
     });
@@ -1987,43 +2091,62 @@ createApp({
       return [...map.values()].filter(c => c.name.toLowerCase().includes(petugasQuery.value.toLowerCase()));
     });
 
+    // PATCH #9: FileReader onerror + try/finally
     async function handleFileUpload(event) {
       const files = event.target.files;
-      if (!files.length) return;
+      if (!files || !files.length) return;
       isUploading.value = true;
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.size > 3 * 1024 * 1024) {
-          showFlash(`File ${file.name} terlalu besar (maks 3MB).`, "error");
-          continue;
-        }
-        const base64 = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsDataURL(file);
-        });
-        try {
-          const res = await runGas("apiUploadFile", base64, file.name, file.type);
-          if (res && res.success) {
-            reportForm.value.evidenceList.push(res.url); 
-          } else {
-            showFlash("Gagal upload: " + (res ? res.error : "Unknown error"), "error");
+      try {
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (file.size > 3 * 1024 * 1024) {
+            showFlash(`File ${file.name} terlalu besar (maks 3MB).`, "error");
+            continue;
           }
-        } catch (err) {
-          showFlash("Error: " + err.message, "error");
+          let base64;
+          try {
+            base64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target.result);
+              reader.onerror = () => reject(new Error("Gagal membaca file " + file.name));
+              reader.readAsDataURL(file);
+            });
+          } catch (readErr) {
+            showFlash(readErr.message, "error");
+            continue;
+          }
+          try {
+            const res = await runGas("apiUploadFile", base64, file.name, file.type);
+            if (res && res.success) {
+              reportForm.value.evidenceList.push(res.url);
+            } else {
+              showFlash("Gagal upload: " + (res ? res.error : "Unknown error"), "error");
+            }
+          } catch (err) {
+            showFlash("Error upload: " + err.message, "error");
+          }
         }
+      } finally {
+        isUploading.value = false;
+        event.target.value = "";
       }
-      isUploading.value = false;
-      event.target.value = ""; 
     }
 
+    // PATCH #11: formatDropdownLabel tanggal lokal
     function formatDropdownLabel(l) {
-      const d = new Date(l.startDate);
+      const s = String(l.startDate || "");
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const d = new Date(s + "T00:00:00");
+        return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')} - ${l.title}`;
+      }
+      const d = new Date(s);
+      if (isNaN(d)) return `— - ${l.title}`;
       return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')} - ${l.title}`;
     }
 
+    // PATCH #11: blankLetter tanggal lokal
     function blankLetter() {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateStr();
       const first = data.value.users.find(u => u.role === "PETUGAS");
       return {
         activityCode: "PATROLI", title: "", legalBasis: "Perda No. 3 Tahun 2019 tentang Ketertiban Umum dan Ketentraman Masyarakat.", letterDate: today,
@@ -2041,7 +2164,20 @@ createApp({
       };
     }
     
-    function isSelPetugas(name) { return letterForm.value.personnel.some(p => p.name === name); }
+    // PATCH #14: isSelPetugas precompute + onPresetChange
+    const _selectedPersonnelSet = computed(() => new Set((letterForm.value && letterForm.value.personnel ? letterForm.value.personnel : []).map(p => p.name)));
+    function isSelPetugas(name) { return _selectedPersonnelSet.value.has(name); }
+    async function onPresetChange(e) {
+      if (e.target.value === "__MANUAL__") {
+        letterForm.value.title = "";
+        await nextTick();
+        const el = document.getElementById("input-title-manual");
+        if (el) el.focus();
+      } else {
+        letterForm.value.title = e.target.value;
+      }
+    }
+
     function togglePetugas(name, checked) {
       if (!checked) { letterForm.value.personnel = letterForm.value.personnel.filter(p => p.name !== name); return; }
       const hasKetua = letterForm.value.personnel.some(p => p.role === "Ketua Tim");
@@ -2096,11 +2232,12 @@ createApp({
       if (ok) { letterForm.value = null; tab.value = "letters"; showFlash("ST berhasil disimpan."); }
     }
 
-    function openNewReport() {
+    // PATCH #10: openNewReport menerima letterId
+    function openNewReport(letterId) {
       if (!issuedLetters.value.length) return showFlash("Belum ada ST Terbit (ISSUED).", "error");
       editingReportId.value = null;
-      const firstST = issuedLetters.value[0];
-      reportForm.value = { letterId: firstST.id, activityCode: firstST.activityCode, actualTime: new Date().toISOString().slice(0, 16), actualLocation: "", description: "", results: "", obstacles: "Nihil", recommendation: "", violationRef: "", violatorCount: 0, actionTaken: "", evidenceInput: "", evidenceList: [], objectTarget: "", massEstimate: "", targetAudience: "", materialTopic: "" };
+      const firstST = (letterId && issuedLetters.value.find(l => l.id === letterId)) || issuedLetters.value[0];
+      reportForm.value = { letterId: firstST.id, activityCode: firstST.activityCode, actualTime: localDateTimeStr(), actualLocation: "", description: "", results: "", obstacles: "Nihil", recommendation: "", violationRef: "", violatorCount: 0, actionTaken: "", evidenceInput: "", evidenceList: [], objectTarget: "", massEstimate: "", targetAudience: "", materialTopic: "" };
     }
     function openEditReport(r) { 
       editingReportId.value = r.id; 
@@ -2131,10 +2268,11 @@ createApp({
       if (ok) { detailReport.value = null; showFlash("Laporan ditutup."); }
     }
 
+    // PATCH #11: tanggal lokal di openNewFu
     function openNewFu(report) {
       editingFuId.value = null;
       const koord = data.value.users.find(u => u.role === "KOORDINATOR");
-      fuForm.value = { reportId: report ? report.id : "", actionRequired: report ? report.recommendation : "", pic: koord ? koord.name : "", picUnit: "Seksi Operasional", deadline: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10), priority: "Sedang", progressNote: "" };
+      fuForm.value = { reportId: report ? report.id : "", actionRequired: report ? report.recommendation : "", pic: koord ? koord.name : "", picUnit: "Seksi Operasional", deadline: localDateStr(new Date(Date.now() + 7 * 864e5)), priority: "Sedang", progressNote: "" };
     }
     function addFollowUpFromDetail() { const r = detailReport.value; detailReport.value = null; openNewFu(r); }
     function openEditFu(f) { editingFuId.value = f.id; fuForm.value = { reportId: f.reportId || "", actionRequired: f.actionRequired, pic: f.pic, picUnit: f.picUnit, deadline: f.deadline || "", priority: f.priority, progressNote: f.progressNote }; }
@@ -2161,7 +2299,7 @@ createApp({
         if (ok) showFlash("ST dikembalikan.");
       } else if (na.kind === "verifyReport") {
         const koord = data.value.users.find(u => u.role === "KOORDINATOR");
-        const ok = await api("apiUpdateReport", na.id, Object.assign({ action: "verify", verificationNote: note || "Terverifikasi.", pic: koord ? koord.name : me, picUnit: currentUser.value ? currentUser.value.unit : "", deadline: new Date(Date.now() + 10 * 864e5).toISOString().slice(0, 10), priority: "Sedang", auditDetail: ("Diverifikasi. " + note).trim() }, a));
+        const ok = await api("apiUpdateReport", na.id, Object.assign({ action: "verify", verificationNote: note || "Terverifikasi.", pic: koord ? koord.name : me, picUnit: currentUser.value ? currentUser.value.unit : "", deadline: localDateStr(new Date(Date.now() + 10 * 864e5)), priority: "Sedang", auditDetail: ("Diverifikasi. " + note).trim() }, a));
         if (ok) showFlash("Laporan terverifikasi.");
       } else if (na.kind === "rejectReport") {
         if (!note) return showFlash("Catatan wajib diisi.", "error");
@@ -2183,11 +2321,12 @@ createApp({
       if (ok) { showFlash(msg); detailLetter.value = null; }
     }
 
+    // PATCH #23: villages options sebagai {value,label}
     const MASTER_DEFS = computed(() => ({
       users: { label: "Pengguna & RBAC", resource: "users", columns: [{key:"name",label:"Nama & NIP"},{key:"jabatan",label:"Jabatan"},{key:"unit",label:"Unit Kerja"},{key:"role",label:"Role"},{key:"canSign",label:"can_sign"}], fields: [{name:"name",label:"Nama Lengkap",placeholder:"Nama"}, {name:"nip",label:"NIP",placeholder:"18 digit"}, {name:"pangkatGol",label:"Pangkat / Gol",options:["Juru Muda / I/a","Juru Muda Tk.I / I/b","Juru / I/c","Juru Tk.I / I/d","Pengatur Muda / II/a","Pengatur Muda Tk.I / II/b","Pengatur / II/c","Pengatur Tk.I / II/d","Penata Muda / III/a","Penata Muda Tk.I / III/b","Penata / III/c","Penata Tk.I / III/d","Pembina / IV/a","Pembina Tk.I / IV/b","Pembina Utama Muda / IV/c","Pembina Utama Madya / IV/d","Pembina Utama / IV/e"]}, {name:"jenisJabatan",label:"Jenis Jabatan",options:["Struktural", "Fungsional", "Pelaksana"]}, {name:"jabatan",label:"Jabatan"}, {name:"unit",label:"Unit Kerja",options:UNITS}, {name:"email",label:"Email",type:"email"}, {name:"noHp",label:"No HP",type:"tel"}, {name:"role",label:"Role",options:ROLES}, {name:"canSign",label:"can_sign",type:"checkbox"}] },
       activityTypes: { label: "Jenis Kegiatan", resource: "activityTypes", columns: [{key:"code",label:"Kode"},{key:"name",label:"Nama"},{key:"classification",label:"Klasifikasi"},{key:"stCode",label:"Kode ST"},{key:"reportCode",label:"Kode Laporan"}], fields: [{name:"code",label:"Kode"},{name:"name",label:"Nama"},{name:"classification",label:"Klasifikasi",options:["INTERNAL","TERBATAS"]},{name:"stCode",label:"Prefix ST"},{name:"reportCode",label:"Prefix Laporan"},{name:"description",label:"Deskripsi",type:"textarea"}] },
       regions: { label: "Kecamatan", resource: "regions", columns: [{key:"code",label:"Kode"},{key:"name",label:"Nama"},{key:"risk",label:"Kerawanan"}], fields: [{name:"code",label:"Kode"},{name:"name",label:"Nama"},{name:"risk",label:"Risiko",options:["Normal","Sedang","Tinggi"]}] },
-      villages: { label: "Desa/Kel", resource: "villages", columns: [{key:"code",label:"Kode"},{key:"name",label:"Nama"},{key:"regionCode",label:"Kecamatan"}], fields: [{name:"code",label:"Kode"},{name:"name",label:"Nama"},{name:"regionCode",label:"Kecamatan",options: data.value ? data.value.regions.map(r => r.code) : []}] },
+      villages: { label: "Desa/Kel", resource: "villages", columns: [{key:"code",label:"Kode"},{key:"name",label:"Nama"},{key:"regionCode",label:"Kecamatan"}], fields: [{name:"code",label:"Kode"},{name:"name",label:"Nama"},{name:"regionCode",label:"Kecamatan",options: data.value ? data.value.regions.map(r => ({ value: r.code, label: r.name })) : []}] },
       signers: { label: "Penandatangan", resource: "signers", columns: [{key:"name",label:"Nama"},{key:"position",label:"Jabatan"},{key:"nip",label:"NIP"}], fields: [{name:"name",label:"Nama"},{name:"position",label:"Jabatan"},{name:"pangkatGol",label:"Pangkat"},{name:"nip",label:"NIP"}] },
       violations: { label: "Perda", resource: "violations", columns: [{key:"perdaNo",label:"Perda"},{key:"article",label:"Pasal"},{key:"description",label:"Perihal"},{key:"category",label:"Kategori"},{key:"sanction",label:"Sanksi"}], fields: [{name:"code",label:"Kode"},{name:"perdaNo",label:"Nomor"},{name:"article",label:"Pasal"},{name:"description",label:"Perihal",type:"textarea"},{name:"category",label:"Kategori"},{name:"sanction",label:"Sanksi"}] },
       assets: { label: "Aset", resource: "assets", columns: [{key:"code",label:"Kode"},{key:"name",label:"Nama"},{key:"category",label:"Kategori"},{key:"spec",label:"Spesifikasi"},{key:"condition",label:"Kondisi"}], fields: [{name:"code",label:"Kode"},{name:"name",label:"Nama"},{name:"category",label:"Kategori"},{name:"spec",label:"Spesifikasi"},{name:"condition",label:"Kondisi",options:["Baik","Perawatan","Rusak Ringan","Rusak Berat"]}] },
@@ -2199,7 +2338,7 @@ createApp({
     
     function openMaster(sub, row, prefill = null) {
       const def = MASTER_DEFS.value[sub], values = {};
-      def.fields.forEach(f => { values[f.name] = f.type === "checkbox" ? !!(row && row[f.name]) : ((row && row[f.name]) !== undefined && row ? row[f.name] : (f.options ? f.options[0] : f.type === "number" ? 0 : "")); });
+      def.fields.forEach(f => { values[f.name] = f.type === "checkbox" ? !!(row && row[f.name]) : ((row && row[f.name]) !== undefined && row ? row[f.name] : (f.options ? (typeof f.options[0] === "object" ? f.options[0].value : f.options[0]) : f.type === "number" ? 0 : "")); });
       if (prefill) Object.assign(values, prefill);
       masterForm.value = { sub, id: row ? row.id : null, values };
     }
@@ -2217,75 +2356,78 @@ createApp({
       if (ok) { showFlash("Data dihapus."); confirmDel.value = null; detailLetter.value = null; }
     }
 
-    function pipelineActive(status, i) { const mapped = status === "COMPLETED" ? "ISSUED" : status === "READY_TO_ISSUE" ? "PENDING_APPROVAL" : status; const idx = ["DRAFT", "PENDING_APPROVAL", "ISSUED"].indexOf(mapped); return idx >= i && !["REJECTED", "CANCELLED"].includes(status); }
     function assetNames(codes, onlyVehicle) { return (codes || []).filter(c => { const a = data.value.assets.find(x => x.code === c); const veh = a ? a.category.toLowerCase().includes("kendaraan") : false; return onlyVehicle === undefined ? true : veh === onlyVehicle; }).map(c => { const a = data.value.assets.find(x => x.code === c); return a ? a.name : c; }).join(", ") || "-"; }
-    function letterDetailFields(l) { return [["Tanggal Surat", fmtDate(l.letterDate || l.startDate)], ["Jenis Kegiatan", l.activityName], ["Mulai", fmtDate(l.startDate) + (l.startTime ? " pukul " + l.startTime + " WIB" : "")], ["Selesai", fmtDate(l.endDate) + (l.endTime ? " pukul " + l.endTime + " WIB" : "")], ["Kecamatan", l.location], ["Desa / Kelurahan", l.village || "-"], ["Nama Lokasi", l.locationName || "-"], ["Penandatangan", (l.signerName || "-") + " — " + (l.signerPosition || "-")], ["Dasar Surat", l.legalBasis || "-"], ["Kendaraan", assetNames(l.assetsUsed, true)], ["Peralatan", assetNames(l.assetsUsed, false)]]; }
-    
+
+    // ─────────────────────────────────────────────────────────────
+    // PATCH #12: doPrint dirombak total — escape HTML di setiap interpolasi
+    // ─────────────────────────────────────────────────────────────
     function doPrint(l) {
       const rows = (l.personnel || []).map((p, i) => `<tr>
-        <td style="border:1px solid #000; padding:4px; text-align:center; font-size:11px;">${i + 1}</td>
-        <td style="border:1px solid #000; padding:4px; font-size:11px;"><b>${p.name}</b><br><span style="font-size:9px;">NIP. ${p.nip || "-"}</span></td>
-        <td style="border:1px solid #000; padding:4px; font-size:11px; text-align:center;">${p.rank || "-"}</td>
-        <td style="border:1px solid #000; padding:4px; font-size:11px; text-align:center;">${p.role}</td>
-        <td style="border:1px solid #000; padding:4px; font-size:11px; text-align:center;">-</td>
+        <td style="border:1px solid #000;padding:4px;text-align:center;font-size:11px;">${i + 1}</td>
+        <td style="border:1px solid #000;padding:4px;font-size:11px;"><b>${esc(p.name)}</b><br><span style="font-size:9px;">NIP. ${esc(p.nip) || "-"}</span></td>
+        <td style="border:1px solid #000;padding:4px;font-size:11px;text-align:center;">${esc(p.rank) || "-"}</td>
+        <td style="border:1px solid #000;padding:4px;font-size:11px;text-align:center;">${esc(p.role)}</td>
+        <td style="border:1px solid #000;padding:4px;font-size:11px;text-align:center;">-</td>
       </tr>`).join("");
 
-      let specificHtml = "";
-      if (l.specificData && Object.keys(l.specificData).length > 0) {
-        const keys = Object.keys(l.specificData).filter(k => l.specificData[k]);
-        if (keys.length > 0) {
-          specificHtml = `<ul style="margin:2px 0 2px 20px; padding:0;">`;
-          keys.forEach(k => { const labels = { route: "Rute/Titik", targetAudience: "Target", materialTopic: "Materi", threatIssue: "Isu", riskLevel: "Risiko", perdaRef: "Acuan Perda", objectTarget: "Objek", massEstimate: "Estimasi Massa", tacticalGear: "Peralatan Dalmas" }; specificHtml += `<li>${labels[k] || k}: ${l.specificData[k]}</li>`; });
-          specificHtml += `</ul>`;
-        }
-      }
-
       const logoUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBkPSJNNTAgMTBhNDAgNDAgMCAwIDAgMCA4MCA0MCA0MCAwIDAgMCAwLTgwIiBmaWxsPSIjMDY0ZTNkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IndoaXRlIj5UPC90ZXh0Pjwvc3ZnPg==";
+      const letterDate = l.letterDate || l.startDate;
+      const safeLetterDate = letterDate ? new Date(String(letterDate).length <= 10 ? letterDate + "T00:00:00" : letterDate) : null;
+      const tglSurat = safeLetterDate && !isNaN(safeLetterDate)
+        ? safeLetterDate.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+        : "-";
+      const kecName = (l.location || "").replace(/Kecamatan /i, "");
 
       document.getElementById("print-area").innerHTML = `
         <style>@page { size: A4 portrait; margin: 15mm 20mm; } body { font-family: 'Times New Roman', Times, serif; font-size: 11px; line-height: 1.35; color: #000; margin: 0; padding: 0; } .header-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; } .header-table td { text-align: center; vertical-align: middle; } .header-table img { width: 60px; } .header-text1 { margin: 0; font-size: 13px; font-weight: bold; letter-spacing: 1px; } .header-text2 { margin: 0; font-size: 16px; font-weight: bold; } .header-text3 { margin: 0; font-size: 10px; } .line { border-top: 2px solid #000; border-bottom: 1px solid #000; height: 2px; margin: 8px 0 12px 0; } .title { text-align: center; margin-bottom: 12px; } .title h2 { margin: 0; font-size: 15px; font-weight: bold; text-decoration: underline; } .title p { margin: 2px 0 0; font-size: 11px; } .content p { margin: 0 0 3px; text-align: justify; } .content ol { margin: 0 0 8px 20px; padding: 0; text-align: justify; } .content ul { margin: 2px 0 2px 20px; padding: 0; } .content li { margin-bottom: 2px; } .data-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; } .data-table th { border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px; } .data-table td { border: 1px solid #000; padding: 3px; font-size: 11px; } .signature-box { margin-left: auto; width: 280px; text-align: left; margin-top: 10px; } .signature-box p { margin: 0; } .signature-space { height: 50px; }</style>
-        <table class="header-table"><tr><td style="width: 15%;"><img src="${logoUrl}" alt="Logo"></td><td style="width: 85%;"><p class="header-text1">PEMERINTAH KABUPATEN TRENGGALEK</p><p class="header-text2">SATUAN POLISI PAMONG PRAJA DAN KEBAKARAN</p><p class="header-text3">Jln. Dr. Soetomo No. 4 Kelurahan Ngantru, Trenggalek</p></td></tr></table>
+        <table class="header-table"><tr><td style="width:15%;"><img src="${logoUrl}" alt="Logo"></td><td style="width:85%;"><p class="header-text1">PEMERINTAH KABUPATEN TRENGGALEK</p><p class="header-text2">SATUAN POLISI PAMONG PRAJA DAN KEBAKARAN</p><p class="header-text3">Jln. Dr. Soetomo No. 4 Kelurahan Ngantru, Trenggalek</p></td></tr></table>
         <div class="line"></div>
-        <div class="title"><h2>SURAT TUGAS</h2><p>Nomor: ${l.officialNumber || l.draftNumber || "-"}</p></div>
+        <div class="title"><h2>SURAT TUGAS</h2><p>Nomor: ${esc(l.officialNumber) || esc(l.draftNumber) || "-"}</p></div>
         <div class="content">
-          <p style="font-weight: bold; margin-bottom: 2px;">Dasar:</p>
-          <ol><li>Permendagri No. 16 Tahun 2023 tentang Standar Operasional Prosedur Satuan Polisi Pamong Praja dan Kode Etik Polisi Pamong Praja;</li><li>Permendagri No. 26 Tahun 2020 tentang Penyelenggaraan Ketertiban Umum Dan Ketenteraman Masyarakat Serta Pelindungan Masyarakat;</li><li>${l.legalBasis || "Peraturan perundang-undangan yang berlaku."}</li></ol>
-          <p style="text-align: center; font-weight: bold; margin: 10px 0 6px;">Memberikan Tugas :</p>
-          <p>Kepada Petugas Satpol PPK yang namanya tercantum di bawah ini :</p>
-          <table class="data-table"><thead><tr><th style="width: 5%;">No</th><th style="width: 35%;">Nama & NIP</th><th style="width: 20%;">Pangkat / Gol</th><th style="width: 20%;">Jabatan</th><th style="width: 20%;">Keterangan</th></tr></thead><tbody>${rows}</tbody></table>
-          <p style="margin-top: 6px;">Untuk:</p>
+          <p style="font-weight:bold;margin-bottom:2px;">Dasar:</p>
           <ol>
-            <li style="margin-bottom: 4px;">Melaksanakan tugas <b>${l.activityName}</b> yang berlokasi di wilayah Kecamatan <b>${(l.location || "").replace(/Kecamatan /i, '')}</b>, dengan jadwal sebagai berikut :<ul><li>Hari, Tanggal : ${fmtDate(l.startDate)} s.d. ${fmtDate(l.endDate)}</li><li>Tempat : ${l.locationName || "-"}${l.village ? `, Kel. ${l.village}` : ""}, Kec. ${(l.location || "").replace(/Kecamatan /i, '')}</li><li>Keperluan : ${l.purpose || l.title}</li>${specificHtml ? `<li>Keterangan Khusus : ${specificHtml}</li>` : ""}</ul></li>
-            <li style="margin-bottom: 4px;">Menggunakan sarana prasarana berupa Unit <b>${assetNames(l.assetsUsed, true)}</b> serta peralatan pendukung lainnya guna kelancaran pelaksanaan tugas.</li>
+            <li>Permendagri No. 16 Tahun 2023 tentang Standar Operasional Prosedur Satuan Polisi Pamong Praja dan Kode Etik Polisi Pamong Praja;</li>
+            <li>Permendagri No. 26 Tahun 2020 tentang Penyelenggaraan Ketertiban Umum Dan Ketenteraman Masyarakat Serta Pelindungan Masyarakat;</li>
+            <li>${esc(l.legalBasis) || "Peraturan perundang-undangan yang berlaku."}</li>
+          </ol>
+          <p style="text-align:center;font-weight:bold;margin:10px 0 6px;">Memberikan Tugas :</p>
+          <p>Kepada Petugas Satpol PPK yang namanya tercantum di bawah ini :</p>
+          <table class="data-table"><thead><tr><th style="width:5%;">No</th><th style="width:35%;">Nama & NIP</th><th style="width:20%;">Pangkat / Gol</th><th style="width:20%;">Jabatan</th><th style="width:20%;">Keterangan</th></tr></thead><tbody>${rows}</tbody></table>
+          <p style="margin-top:6px;">Untuk:</p>
+          <ol>
+            <li style="margin-bottom:4px;">Melaksanakan tugas <b>${esc(l.activityName)}</b> yang berlokasi di wilayah Kecamatan <b>${esc(kecName)}</b>, dengan jadwal sebagai berikut :<ul><li>Hari, Tanggal : ${esc(fmtDate(l.startDate))} s.d. ${esc(fmtDate(l.endDate))}</li><li>Tempat : ${esc(l.locationName) || "-"}${l.village ? `, Kel. ${esc(l.village)}` : ""}, Kec. ${esc(kecName)}</li><li>Keperluan : ${esc(l.purpose) || esc(l.title)}</li></ul></li>
+            <li style="margin-bottom:4px;">Menggunakan sarana prasarana berupa Unit <b>${esc(assetNames(l.assetsUsed, true))}</b> serta peralatan pendukung lainnya guna kelancaran pelaksanaan tugas.</li>
             <li>Instruksi Khusus :<ul><li>Melaksanakan koordinasi secara intensif dengan pihak Kepolisian atau instansi terkait lainnya sesuai kebutuhan di lapangan.</li><li>Melaporkan setiap perkembangan situasi dan hasil pelaksanaan tugas secara berkala dan berjenjang kepada pimpinan.</li><li>Wajib mengutamakan aspek keselamatan personel serta masyarakat di sekitar lokasi kegiatan.</li></ul></li>
           </ol>
-          <p style="margin: 10px 0;">Demikian Surat Tugas ini dibuat untuk dilaksanakan dengan penuh rasa tanggung jawab.</p>
-          <div class="signature-box"><p>Ditetapkan di : Trenggalek</p><p>Pada tanggal : ${new Date(l.letterDate || l.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p><p style="font-weight: bold; margin-top: 2px;">KEPALA SATUAN<br>POLISI PAMONG PRAJA DAN PEMADAM<br>KEBAKARAN KABUPATEN TRENGGALEK</p><div class="signature-space"></div><p style="font-weight: bold; text-decoration: underline;">${l.signerName || "-"}</p><p>${l.signerRank || "-"}</p><p>NIP. ${l.signerNip || "-"}</p></div>
+          <p style="margin:10px 0;">Demikian Surat Tugas ini dibuat untuk dilaksanakan dengan penuh rasa tanggung jawab.</p>
+          <div class="signature-box"><p>Ditetapkan di : Trenggalek</p><p>Pada tanggal : ${esc(tglSurat)}</p><p style="font-weight:bold;margin-top:2px;">KEPALA SATUAN<br>POLISI PAMONG PRAJA DAN PEMADAM<br>KEBAKARAN KABUPATEN TRENGGALEK</p><div class="signature-space"></div><p style="font-weight:bold;text-decoration:underline;">${esc(l.signerName) || "-"}</p><p>${esc(l.signerRank) || "-"}</p><p>NIP. ${esc(l.signerNip) || "-"}</p></div>
         </div>
       `;
       setTimeout(() => { window.print(); }, 500);
     }
 
+    // PATCH #13: downloadCSV dengan sanitasi formula injection
     function downloadCSV(filename, headers, rows) {
-      const esc = (v) => '"' + String(v === null || v === undefined ? "" : v).replaceAll('"', '""') + '"';
-      const csv = [headers.map(esc).join(";")].concat(rows.map(r => r.map(esc).join(";"))).join("\n");
+      const csv = [headers.map(csvCell).join(";")].concat(rows.map(r => r.map(csvCell).join(";"))).join("\n");
       const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" })); a.download = filename; a.click(); URL.revokeObjectURL(a.href); showFlash("Berkas diunduh.");
     }
     function exportLettersCsv() { downloadCSV("rekap-surat-tugas.csv", ["Kode","Nomor Resmi","Tanggal Surat","Nama Kegiatan","Jenis Kegiatan","Klasifikasi","Unit","Dasar Surat","Mulai","Selesai","Kecamatan","Desa/Kelurahan","Nama Lokasi","Petugas","Ketua Tim","Kendaraan & Peralatan","Catatan","Penandatangan","Status"], filteredLetters.value.map(l => [l.code, l.officialNumber || l.draftNumber, l.letterDate || "", l.title, l.activityName, l.classification, l.unit, l.legalBasis || "", (l.startDate + " " + (l.startTime || "")).trim(), (l.endDate + " " + (l.endTime || "")).trim(), l.location, l.village || "", l.locationName || "", (l.personnel || []).map(p => p.name).join(", "), l.teamLeader, (l.assetsUsed || []).join(", "), l.notes || "", l.signerName, (LETTER_STATUS[l.status] || {}).label || l.status])); }
-    function exportLettersPdf() { const rows = filteredLetters.value; if (!rows.length) return showFlash("Tidak ada data.", "error"); const esc = (v) => String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); const html = `<div style="font-family:'Times New Roman', Times, serif; color:#000; line-height:1.4; font-size:11px; padding:10px;"><div style="text-align:center; margin-bottom:14px; border-bottom:3px solid #000; padding-bottom:8px;"><h2 style="margin:0; font-size:16px; font-weight:bold;">REKAPITULASI SURAT TUGAS</h2><p style="margin:3px 0 0; font-size:12px;">SATUAN POLISI PAMONG PRAJA DAN KEBAKARAN KABUPATEN TRENGGALEK</p><p style="margin:3px 0 0; font-size:10px; color:#444;">Total: ${rows.length} data</p></div><table style="width:100%; border-collapse:collapse; font-size:9.5px;"><thead><tr style="background:#065f46; color:#fff;"><th style="border:1px solid #000; padding:4px; text-align:center; width:26px;">No</th><th style="border:1px solid #000; padding:4px; width:78px;">Tanggal</th><th style="border:1px solid #000; padding:4px; width:120px;">Kode / No. Resmi</th><th style="border:1px solid #000; padding:4px; width:90px;">Jenis</th><th style="border:1px solid #000; padding:4px;">Nama Kegiatan</th><th style="border:1px solid #000; padding:4px; width:110px;">Lokasi</th><th style="border:1px solid #000; padding:4px; width:90px;">Ketua Tim</th><th style="border:1px solid #000; padding:4px; width:70px;">Status</th></tr></thead><tbody>${rows.map((st, i) => `<tr><td style="border:1px solid #000; padding:3px; text-align:center;">${i + 1}</td><td style="border:1px solid #000; padding:3px;">${esc(fmtDate(st.startDate))}${st.endDate && st.endDate !== st.startDate ? " s.d. " + esc(fmtDate(st.endDate)) : ""}</td><td style="border:1px solid #000; padding:3px; font-family:monospace; font-size:8.5px;">${esc(st.code)}<br>${esc(st.officialNumber || st.draftNumber || "-")}</td><td style="border:1px solid #000; padding:3px;">${esc(st.activityName)}<br><i style="color:#a00; font-size:8px;">${esc(st.classification)}</i></td><td style="border:1px solid #000; padding:3px;">${esc(st.title)}</td><td style="border:1px solid #000; padding:3px;">${esc([st.locationName, st.village, st.location].filter(Boolean).join(", ")) || "-"}</td><td style="border:1px solid #000; padding:3px;">${esc(st.teamLeader || "-")}</td><td style="border:1px solid #000; padding:3px;">${esc((LETTER_STATUS[st.status] || {}).label || st.status)}</td></tr>`).join("")}</tbody></table><p style="margin-top:14px; font-size:9px; text-align:right; color:#666;">Dicetak: ${esc(new Date().toLocaleString("id-ID"))}</p></div>`; document.getElementById("print-area").innerHTML = html; setTimeout(() => window.print(), 400); showFlash("Menyiapkan PDF."); }
+    function exportLettersPdf() { const rows = filteredLetters.value; if (!rows.length) return showFlash("Tidak ada data.", "error"); const html = `<div style="font-family:'Times New Roman', Times, serif; color:#000; line-height:1.4; font-size:11px; padding:10px;"><div style="text-align:center; margin-bottom:14px; border-bottom:3px solid #000; padding-bottom:8px;"><h2 style="margin:0; font-size:16px; font-weight:bold;">REKAPITULASI SURAT TUGAS</h2><p style="margin:3px 0 0; font-size:12px;">SATUAN POLISI PAMONG PRAJA DAN KEBAKARAN KABUPATEN TRENGGALEK</p><p style="margin:3px 0 0; font-size:10px; color:#444;">Total: ${rows.length} data</p></div><table style="width:100%; border-collapse:collapse; font-size:9.5px;"><thead><tr style="background:#065f46; color:#fff;"><th style="border:1px solid #000; padding:4px; text-align:center; width:26px;">No</th><th style="border:1px solid #000; padding:4px; width:78px;">Tanggal</th><th style="border:1px solid #000; padding:4px; width:120px;">Kode / No. Resmi</th><th style="border:1px solid #000; padding:4px; width:90px;">Jenis</th><th style="border:1px solid #000; padding:4px;">Nama Kegiatan</th><th style="border:1px solid #000; padding:4px; width:110px;">Lokasi</th><th style="border:1px solid #000; padding:4px; width:90px;">Ketua Tim</th><th style="border:1px solid #000; padding:4px; width:70px;">Status</th></tr></thead><tbody>${rows.map((st, i) => `<tr><td style="border:1px solid #000; padding:3px; text-align:center;">${i + 1}</td><td style="border:1px solid #000; padding:3px;">${esc(fmtDate(st.startDate))}${st.endDate && st.endDate !== st.startDate ? " s.d. " + esc(fmtDate(st.endDate)) : ""}</td><td style="border:1px solid #000; padding:3px; font-family:monospace; font-size:8.5px;">${esc(st.code)}<br>${esc(st.officialNumber || st.draftNumber || "-")}</td><td style="border:1px solid #000; padding:3px;">${esc(st.activityName)}<br><i style="color:#a00; font-size:8px;">${esc(st.classification)}</i></td><td style="border:1px solid #000; padding:3px;">${esc(st.title)}</td><td style="border:1px solid #000; padding:3px;">${esc([st.locationName, st.village, st.location].filter(Boolean).join(", ")) || "-"}</td><td style="border:1px solid #000; padding:3px;">${esc(st.teamLeader || "-")}</td><td style="border:1px solid #000; padding:3px;">${esc((LETTER_STATUS[st.status] || {}).label || st.status)}</td></tr>`).join("")}</tbody></table><p style="margin-top:14px; font-size:9px; text-align:right; color:#666;">Dicetak: ${esc(new Date().toLocaleString("id-ID"))}</p></div>`; document.getElementById("print-area").innerHTML = html; setTimeout(() => window.print(), 400); showFlash("Menyiapkan PDF."); }
     function exportReportsCsv() { downloadCSV("rekap-laporan-kegiatan.csv", ["Kode", "No. ST", "Waktu Aktual", "Jenis Kegiatan", "Lokasi Aktual", "Uraian Pelaksanaan", "Hasil Temuan", "Jumlah Pelanggar", "Tindakan", "Acuan Perda", "Kendala", "Rekomendasi", "Status", "Diverifikasi Oleh"], filteredReports.value.map(r => [r.code, r.stNumber || "", r.actualTime || "", r.activityName, r.actualLocation || "", r.description || "", r.results || "", r.violatorCount || 0, r.actionTaken || "", r.violationRef || "", r.obstacles || "", r.recommendation || "", (REPORT_STATUS[r.status] || {}).label || r.status, r.verifiedBy || ""])); }
-    function exportReportsPdf() { const rows = filteredReports.value; if (!rows.length) return showFlash("Tidak ada data.", "error"); const esc = (v) => String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); const html = `<div style="font-family:'Times New Roman', Times, serif; color:#000; line-height:1.35; font-size:10px; padding:10px;"><div style="text-align:center; margin-bottom:14px; border-bottom:3px solid #000; padding-bottom:8px;"><h2 style="margin:0; font-size:16px; font-weight:bold;">REKAPITULASI LAPORAN KEGIATAN</h2><p style="margin:3px 0 0; font-size:12px;">SATUAN POLISI PAMONG PRAJA DAN KEBAKARAN KABUPATEN TRENGGALEK</p><p style="margin:3px 0 0; font-size:10px; color:#444;">Total: ${rows.length} data</p></div><table style="width:100%; border-collapse:collapse; font-size:8.5px;"><thead><tr style="background:#065f46; color:#fff;"><th style="border:1px solid #000; padding:3px; text-align:center; width:22px;">No</th><th style="border:1px solid #000; padding:3px; width:70px;">Kode / ST</th><th style="border:1px solid #000; padding:3px; width:60px;">Waktu</th><th style="border:1px solid #000; padding:3px;">Jenis Kegiatan</th><th style="border:1px solid #000; padding:3px;">Lokasi</th><th style="border:1px solid #000; padding:3px;">Uraian Pelaksanaan</th><th style="border:1px solid #000; padding:3px;">Hasil Temuan</th><th style="border:1px solid #000; padding:3px; text-align:center; width:32px;">Temuan</th><th style="border:1px solid #000; padding:3px; width:55px;">Status</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td style="border:1px solid #000; padding:2.5px; text-align:center;">${i + 1}</td><td style="border:1px solid #000; padding:2.5px; font-family:monospace; font-size:8px;">${esc(r.code)}<br>${esc(r.stNumber || "-")}</td><td style="border:1px solid #000; padding:2.5px;">${esc(fmtDateTime(r.actualTime))}</td><td style="border:1px solid #000; padding:2.5px;">${esc(r.activityName)}</td><td style="border:1px solid #000; padding:2.5px;">${esc(r.actualLocation || "-")}</td><td style="border:1px solid #000; padding:2.5px;">${esc((r.description || "-").slice(0, 140))}${(r.description || "").length > 140 ? "…" : ""}</td><td style="border:1px solid #000; padding:2.5px;">${esc((r.results || "-").slice(0, 140))}${(r.results || "").length > 140 ? "…" : ""}</td><td style="border:1px solid #000; padding:2.5px; text-align:center;">${Number(r.violatorCount) || 0}</td><td style="border:1px solid #000; padding:2.5px;">${esc((REPORT_STATUS[r.status] || {}).label || r.status)}</td></tr>`).join("")}</tbody></table><p style="margin-top:14px; font-size:9px; text-align:right; color:#666;">Dicetak: ${esc(new Date().toLocaleString("id-ID"))}</p></div>`; document.getElementById("print-area").innerHTML = html; setTimeout(() => window.print(), 400); showFlash("Menyiapkan PDF."); }
+    function exportReportsPdf() { const rows = filteredReports.value; if (!rows.length) return showFlash("Tidak ada data.", "error"); const html = `<div style="font-family:'Times New Roman', Times, serif; color:#000; line-height:1.35; font-size:10px; padding:10px;"><div style="text-align:center; margin-bottom:14px; border-bottom:3px solid #000; padding-bottom:8px;"><h2 style="margin:0; font-size:16px; font-weight:bold;">REKAPITULASI LAPORAN KEGIATAN</h2><p style="margin:3px 0 0; font-size:12px;">SATUAN POLISI PAMONG PRAJA DAN KEBAKARAN KABUPATEN TRENGGALEK</p><p style="margin:3px 0 0; font-size:10px; color:#444;">Total: ${rows.length} data</p></div><table style="width:100%; border-collapse:collapse; font-size:8.5px;"><thead><tr style="background:#065f46; color:#fff;"><th style="border:1px solid #000; padding:3px; text-align:center; width:22px;">No</th><th style="border:1px solid #000; padding:3px; width:70px;">Kode / ST</th><th style="border:1px solid #000; padding:3px; width:60px;">Waktu</th><th style="border:1px solid #000; padding:3px;">Jenis Kegiatan</th><th style="border:1px solid #000; padding:3px;">Lokasi</th><th style="border:1px solid #000; padding:3px;">Uraian Pelaksanaan</th><th style="border:1px solid #000; padding:3px;">Hasil Temuan</th><th style="border:1px solid #000; padding:3px; text-align:center; width:32px;">Temuan</th><th style="border:1px solid #000; padding:3px; width:55px;">Status</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td style="border:1px solid #000; padding:2.5px; text-align:center;">${i + 1}</td><td style="border:1px solid #000; padding:2.5px; font-family:monospace; font-size:8px;">${esc(r.code)}<br>${esc(r.stNumber || "-")}</td><td style="border:1px solid #000; padding:2.5px;">${esc(fmtDateTime(r.actualTime))}</td><td style="border:1px solid #000; padding:2.5px;">${esc(r.activityName)}</td><td style="border:1px solid #000; padding:2.5px;">${esc(r.actualLocation || "-")}</td><td style="border:1px solid #000; padding:2.5px;">${esc((r.description || "-").slice(0, 140))}${(r.description || "").length > 140 ? "…" : ""}</td><td style="border:1px solid #000; padding:2.5px;">${esc((r.results || "-").slice(0, 140))}${(r.results || "").length > 140 ? "…" : ""}</td><td style="border:1px solid #000; padding:2.5px; text-align:center;">${Number(r.violatorCount) || 0}</td><td style="border:1px solid #000; padding:2.5px;">${esc((REPORT_STATUS[r.status] || {}).label || r.status)}</td></tr>`).join("")}</tbody></table><p style="margin-top:14px; font-size:9px; text-align:right; color:#666;">Dicetak: ${esc(new Date().toLocaleString("id-ID"))}</p></div>`; document.getElementById("print-area").innerHTML = html; setTimeout(() => window.print(), 400); showFlash("Menyiapkan PDF."); }
 
+    // PATCH #15: ekspos helper & state baru ke template
     return {
-      ROLES, UNITS, LETTER_STATUS, REPORT_STATUS, SPEC_LABELS, ACTION_OPTIONS, MASTER_DEFS, FORM_TEMPLATES,
-      data, loading, loadError, refresh, role, tab, adminSub, sidebarCollapsed, toggleSidebar, flash, busy, currentUser,
-      qLetter, fLetterStatus, fLetterAct, fLetterClass, qReport, fReportStatus, fFuStatus, qMaster,
+      ROLES, UNITS, LETTER_STATUS, REPORT_STATUS, ACTION_OPTIONS, MASTER_DEFS, FORM_TEMPLATES,
+      data, loading, loadError, refresh, role, tab, adminSub, sidebarCollapsed, toggleSidebar, flash, busy, busyMode, currentUser,
+      qLetter, qLetterInput, fLetterStatus, fLetterAct, fLetterClass, qReport, qReportInput, fReportStatus, fFuStatus, qMaster,
       filterYear, filterMonth, monthsList, yearsList, currentPage, itemsPerPage, resetPage,
       detailLetter, detailReport, letterForm, editingLetterId, showExtra, petugasQuery, manualPetugas,
       reportForm, editingReportId, fuForm, editingFuId, noteAction, noteText, masterForm, confirmDel, isUploading,
-      stats, navItems, workflowSteps, pendingActions, filteredLetters, filteredReports, filteredFu, masterRows,
+      stats, navItems, pendingActions, filteredLetters, filteredReports, filteredFu, masterRows,
       paginatedLetters, totalLetterPages, paginatedReports, totalReportPages, paginatedFu, totalFuPages, paginatedMaster, totalMasterPages,
       paginatedAuditLogs, totalAuditPages, activeFormFields, formatDropdownLabel,
+      closeTopModal, paginationWindow, onPresetChange, esc,
       actOfForm, villageOptions, presets, vehicles, equipments, candidates, issuedLetters, upcomingLetters, lettersWithoutReport, regionsByLetters, maxActCount, maxRegionCount,
       canCreateLetter, canIssueLetter, fmtDate, fmtDateTime, isOverdue, countLettersByAct, countLetterStatus, barPct, dayOf, monthOf, switchRole,
       openNewLetter, openEditLetter, submitLetter, isSelPetugas, togglePetugas, addManualPetugas, toggleAsset,
@@ -2293,7 +2435,7 @@ createApp({
       openNewFu, openEditFu, submitFu, openNote, runNoteAction, issueLetter, patchLetterStatus,
       addFollowUpFromDetail,
       openMaster, submitMaster, confirmDeleteMaster, runDelete, regionName, badgeFor,
-      pipelineActive, letterDetailFields, doPrint, assetNames, exportLettersCsv,
+      doPrint, assetNames, exportLettersCsv,
       exportLettersPdf, exportReportsCsv, exportReportsPdf,
     };
   }
