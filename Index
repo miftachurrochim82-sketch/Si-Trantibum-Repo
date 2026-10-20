@@ -8,7 +8,6 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   
 <meta charset="UTF-8">
-<!-- PATCH #1: hapus maximum-scale & user-scalable (WCAG 1.4.4) -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#064e3b">
 <meta name="format-detection" content="telephone=no">
@@ -16,7 +15,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>SI TRANTIBUM — Satpol PPK Kab. Trenggalek</title>
 
-<!-- Preconnect untuk Google Fonts agar loading lebih cepat -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -38,7 +36,6 @@
 </script>
 
 <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
-<!-- PATCH #27: fallback jika CDN Vue gagal dimuat -->
 <script>
   if (typeof Vue === "undefined") {
     document.addEventListener("DOMContentLoaded", () => {
@@ -52,110 +49,38 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 
 <style>
-  /* =========================================
-     1. BASE & TYPOGRAPHY
-     ========================================= */
   html { scroll-behavior: smooth; }
   body { font-family: 'Inter', sans-serif; }
   [v-cloak] { display: none !important; }
-  
-  /* Warna seleksi teks disesuaikan dengan tema */
   ::selection { background-color: #10b981; color: #ffffff; }
-
-  /* Custom Scrollbar (Webkit & Firefox) */
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
   ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   * { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
-
-  /* =========================================
-     2. FORM CONTROLS & COMPONENTS
-     ========================================= */
   .inp { width:100%; border:1px solid #cbd5e1; border-radius:.75rem; padding:.625rem .75rem; font-size:.75rem; background:#fff; transition: all 0.2s ease-in-out; }
   .inp:focus { outline:none; border-color:#065f46; box-shadow:0 0 0 3px rgba(6,95,70,.18); background: #f8fafc; }
   .inp:disabled { background-color: #f1f5f9; cursor: not-allowed; color: #94a3b8; }
-  
   .lbl { display:block; font-weight:600; color:#334155; margin-bottom:.375rem; font-size:.75rem; }
   .rown { display:inline-flex; align-items:center; justify-content:center; width:1.25rem; height:1.25rem; border-radius:.375rem; background:#022c22; color:#fff; font-size:10px; font-weight:800; margin-right:.5rem; }
-
-  /* Glassmorphism Utility */
-  .glass-panel {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-  }
-
-  /* Text Glow untuk Tampilan Modern */
+  .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
   .text-glow { text-shadow: 0 0 10px rgba(52, 211, 153, 0.5); }
-
-  /* =========================================
-     3. ANIMATIONS
-     ========================================= */
-  @keyframes float { 
-    0%, 100% { transform: translateY(0px); } 
-    50% { transform: translateY(-12px); } 
-  }
-  @keyframes shake { 
-    0%, 100% { transform: translateX(0); } 
-    20%, 60% { transform: translateX(-6px); } 
-    40%, 80% { transform: translateX(6px); } 
-  }
-  @keyframes shimmer { 
-    0% { background-position: -1000px 0; } 
-    100% { background-position: 1000px 0; } 
-  }
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
+  @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
   .animate-float { animation: float 5s ease-in-out infinite; }
   .animate-shake { animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) both; }
   .animate-fade-up { animation: fadeInUp 0.4s ease-out forwards; }
-  
-  .shimmer-bg {
-    background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%);
-    background-size: 1000px 100%;
-    animation: shimmer 2.5s infinite linear;
-  }
-
-  /* =========================================
-     4. PRINT STYLES (Surat Tugas)
-     ========================================= */
+  .shimmer-bg { background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%); background-size: 1000px 100%; animation: shimmer 2.5s infinite linear; }
   @media print {
-    /* Sembunyikan semua elemen web */
     body * { visibility: hidden; }
-    
-    /* Hanya tampilkan area cetak */
     #print-area, #print-area * { visibility: visible; }
-    #print-area { 
-      position: absolute; 
-      inset: 0; 
-      display: block !important; 
-      padding: 0; 
-      margin: 0;
-      width: 100%;
-    }
-    
-    /* Pastikan warna latar belakang (seperti header tabel hijau) ikut tercetak */
-    * {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-
-    /* Pengaturan Kertas A4 */
-    @page { 
-      size: A4 portrait; 
-      margin: 15mm 20mm; 
-    }
-    
-    /* Hindari pemotongan tabel di tengah halaman */
+    #print-area { position: absolute; inset: 0; display: block !important; padding: 0; margin: 0; width: 100%; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    @page { size: A4 portrait; margin: 15mm 20mm; }
     tr { page-break-inside: avoid; }
   }
-
-  /* PATCH #27: Style untuk fallback CDN Vue gagal */
   #cdn-fallback {
     position: fixed; inset: 0; z-index: 200; display: none;
     background: #0f172a; color: #e2e8f0; padding: 24px;
@@ -166,38 +91,31 @@
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased">
 
-<!-- PATCH #27: Fallback jika CDN Vue gagal dimuat -->
 <div id="cdn-fallback">
   <h2 style="font-size:20px;font-weight:800;">Aplikasi Tidak Dapat Dimuat</h2>
   <p style="max-width:420px;font-size:14px;line-height:1.6;">CDN library gagal dimuat. Periksa koneksi internet dan muat ulang halaman. Jika masalah berlanjut, hubungi administrator sistem.</p>
   <button onclick="location.reload()" style="margin-top:12px;padding:10px 20px;background:#059669;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">Muat Ulang</button>
 </div>
   
-  <!-- 1. Preloader instan (HTML/CSS murni — tampil sebelum Vue siap) -->
   <div id="preloader" class="fixed inset-0 z-[110] bg-slate-950 flex flex-col items-center justify-center transition-opacity duration-300">
     <div class="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
     <p class="text-emerald-400 font-mono text-[10px] font-bold tracking-[0.2em] uppercase animate-pulse">Menyiapkan Sistem...</p>
   </div>
 
-  <!-- 2. Aplikasi Utama (Vue) -->
   <div id="app" v-cloak>
-  <!-- ================= LOADING SCREEN ================= -->
   <div v-if="loading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-950 overflow-hidden">
     <div class="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-emerald-600 rounded-full mix-blend-screen filter blur-[100px] opacity-20 animate-pulse"></div>
     <div class="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] bg-teal-500 rounded-full mix-blend-screen filter blur-[120px] opacity-20 animate-pulse" style="animation-delay: 1s;"></div>
-
     <div class="relative z-10 flex flex-col items-center">
       <div class="relative flex items-center justify-center w-28 h-28 mb-8 group">
         <div class="absolute inset-0 rounded-full border-t-4 border-r-4 border-emerald-500 animate-spin group-hover:border-emerald-400 transition-colors"></div>
         <div class="absolute inset-3 rounded-full border-b-4 border-l-4 border-teal-400 animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
         <i class="fa-solid fa-shield-halved text-4xl text-emerald-400 animate-pulse drop-shadow-[0_0_15px_rgba(52,211,153,0.5)]"></i>
       </div>
-      
       <h2 class="text-3xl font-black text-white tracking-widest uppercase mb-1 drop-shadow-lg">SI TRANTIBUM</h2>
       <p class="text-emerald-400/80 font-medium text-[11px] tracking-[0.25em] uppercase mb-10 flex items-center gap-2">
         <i class="fa-solid fa-satellite-dish text-emerald-500 animate-pulse"></i> Sinkronisasi Data
       </p>
-      
       <div class="w-64 h-2 bg-slate-800/80 rounded-full overflow-hidden shadow-inner border border-slate-700/50 relative">
         <div class="h-full w-full shimmer-bg rounded-full"></div>
         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
@@ -206,19 +124,14 @@
     </div>
   </div>
 
-  <!-- ================= ERROR SCREEN ================= -->
   <div v-else-if="loadError" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950 overflow-hidden">
     <div class="absolute top-1/4 left-1/4 w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] bg-red-600 rounded-full mix-blend-screen filter blur-[120px] opacity-10"></div>
-    
     <div class="relative z-10 bg-slate-900/60 backdrop-blur-2xl border border-slate-700/50 rounded-3xl p-8 max-w-lg w-full text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-float">
       <div class="w-20 h-20 mx-auto bg-red-500/10 rounded-2xl flex items-center justify-center mb-6 shadow-inner border border-red-500/20">
         <i class="fa-solid fa-triangle-exclamation text-4xl text-red-500 animate-shake drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]"></i>
       </div>
-      
       <h2 class="text-2xl font-extrabold text-white mb-2 tracking-wide">Koneksi Terputus</h2>
       <p class="text-sm text-slate-400 mb-6 leading-relaxed">Gagal memuat data dari Spreadsheet.<br>Pastikan deployment Web App versi terbaru dan koneksi stabil.</p>
-      
-      <!-- Kotak Log Error dengan Tombol Copy -->
       <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 mb-8 text-left shadow-inner relative group">
         <div class="flex gap-3 items-start">
           <i class="fa-solid fa-terminal text-slate-600 mt-1 text-sm"></i>
@@ -228,7 +141,6 @@
           <i class="fa-regular fa-copy"></i>
         </button>
       </div>
-      
       <button @click="refresh" class="group relative w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold rounded-xl overflow-hidden shadow-lg hover:shadow-emerald-500/30 transition-all duration-300">
         <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
         <i class="fa-solid fa-rotate-right group-hover:rotate-180 transition-transform duration-500"></i> 
@@ -237,10 +149,8 @@
     </div>
   </div>
 
-  <!-- ================= MAIN APP ================= -->
   <div v-else class="min-h-screen flex flex-col relative">
   
-    <!-- TOAST NOTIFICATION -->
     <transition name="toast">
       <div v-if="flash.text" class="fixed top-20 right-4 sm:right-6 z-[90] max-w-sm w-full animate-fade-up">
         <div :class="flash.type === 'error' ? 'bg-white border-red-500 text-slate-800' : 'bg-white border-emerald-500 text-slate-800'" class="p-4 rounded-2xl border-l-4 shadow-2xl flex items-start gap-3 backdrop-blur-xl bg-opacity-95">
@@ -256,7 +166,6 @@
       </div>
     </transition>
 
-    <!-- PATCH #16: Busy indicator dengan busyMode -->
     <transition name="fade">
       <div v-if="busy" class="fixed top-20 left-1/2 -translate-x-1/2 z-[90] bg-slate-900/90 backdrop-blur-md text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.3)] flex items-center gap-3 border border-slate-700">
         <i class="fa-solid fa-circle-notch fa-spin text-emerald-400 text-sm"></i>
@@ -264,7 +173,6 @@
       </div>
     </transition>
 
-    <!-- Header -->
     <header class="bg-satpol/95 backdrop-blur-md text-white shadow-lg z-40 sticky top-0 border-b border-emerald-900/50 transition-all duration-300">
       <div class="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
         <div class="flex items-center gap-3 min-w-0">
@@ -276,9 +184,7 @@
             <p class="text-[10px] text-emerald-200/80 truncate tracking-wider uppercase">Kab. Trenggalek</p>
           </div>
         </div>
-        
         <div class="flex items-center gap-3 shrink-0">
-          <!-- User Info Modern -->
           <div class="hidden lg:flex items-center gap-3 bg-emerald-900/40 px-3 py-1.5 rounded-full border border-emerald-700/50">
             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-slate-900 font-extrabold text-xs shadow-inner">
               {{ currentUser && currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U' }}
@@ -291,8 +197,6 @@
               </p>
             </div>
           </div>
-          
-          <!-- Role Selector -->
           <div class="relative">
             <select v-model="role" @change="switchRole" class="appearance-none bg-slate-900 text-xs text-white font-bold border border-emerald-600/50 rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer shadow-sm">
               <option v-for="r in ROLES" :value="r">Simulasi: {{ r }}{{ r === 'PIMPINAN' ? ' (sign)' : '' }}</option>
@@ -304,7 +208,6 @@
     </header>
 
     <div class="flex-1 flex w-full max-w-[1440px] mx-auto">
-      <!-- Sidebar -->
       <aside :class="sidebarCollapsed ? 'w-[76px]' : 'w-64'" class="bg-slate-950 text-slate-300 flex-none hidden md:flex flex-col justify-between sticky top-16 h-[calc(100vh-4rem)] transition-[width] duration-300 overflow-hidden border-r border-slate-800/50 z-30 shadow-2xl">
         <div :class="sidebarCollapsed ? 'p-2.5' : 'p-4'" class="space-y-1.5 overflow-y-auto overflow-x-hidden custom-scrollbar">
           <div :class="sidebarCollapsed ? 'justify-center' : 'justify-between px-1'" class="flex items-center mb-4">
@@ -344,16 +247,12 @@
         </div>
       </aside>
 
-      <!-- Main Content Wrapper -->
       <main class="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 bg-slate-50/50">
 
-<!-- ============ DASHBOARD ============ -->
       <section v-if="tab === 'dashboard'" class="space-y-6 animate-fade-up">
-        <!-- Hero Section Modern -->
         <div class="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-2xl border border-emerald-800/30">
           <div class="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 rounded-full bg-emerald-500/20 blur-3xl"></div>
           <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-teal-500/10 blur-3xl"></div>
-          
           <div class="relative z-10 flex flex-col lg:flex-row justify-between gap-6">
             <div class="space-y-3 max-w-2xl">
               <span class="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 font-extrabold text-[11px] rounded-full uppercase tracking-widest backdrop-blur-sm">
@@ -379,7 +278,6 @@
           </div>
         </div>
 
-        <!-- Metrics Modern -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <button @click="tab='letters'; resetPage('letters')" class="group relative bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-start gap-4 text-left hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-sky-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -390,7 +288,6 @@
               <span class="block text-[11px] text-slate-500 mt-1"><span class="text-amber-600 font-bold">{{ stats.pendingLetters }}</span> tertunda · <span class="text-emerald-600 font-bold">{{ stats.issued }}</span> terbit</span>
             </span>
           </button>
-          
           <button @click="tab='reports'; resetPage('reports')" class="group relative bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-start gap-4 text-left hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-emerald-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <span class="relative w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 shadow-sm"><i class="fa-solid fa-clipboard-check text-xl"></i></span>
@@ -400,7 +297,6 @@
               <span class="block text-[11px] text-slate-500 mt-1"><span class="text-amber-600 font-bold">{{ stats.pendingReports }}</span> verifikasi · <span class="text-emerald-600 font-bold">{{ stats.verified }}</span> selesai</span>
             </span>
           </button>
-          
           <button @click="tab='letters'; fLetterClass='TERBATAS'; resetPage('letters')" class="group relative bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-start gap-4 text-left hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-amber-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <span class="relative w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300 shadow-sm"><i class="fa-solid fa-triangle-exclamation text-xl"></i></span>
@@ -410,7 +306,6 @@
               <span class="block text-[11px] text-slate-500 mt-1">Deteksi dini, penertiban &amp; dalmas</span>
             </span>
           </button>
-          
           <button @click="tab='followups'; resetPage('fu')" class="group relative bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-start gap-4 text-left hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-violet-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <span class="relative w-12 h-12 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-violet-500 group-hover:text-white transition-all duration-300 shadow-sm"><i class="fa-solid fa-list-check text-xl"></i></span>
@@ -422,7 +317,6 @@
           </button>
         </div>
 
-        <!-- Warning Overdue -->
         <div v-if="stats.overdueFu" class="bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-2xl p-4 flex flex-wrap items-center gap-4 shadow-sm animate-shake">
           <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
             <i class="fa-solid fa-triangle-exclamation text-lg text-red-600"></i>
@@ -432,7 +326,6 @@
         </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <!-- Pending Actions -->
           <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/60 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-bold text-lg flex items-center gap-2"><span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fa-solid fa-bell"></i></span> Tindakan Tertunda</h3>
@@ -451,8 +344,6 @@
               </div>
             </div>
           </div>
-          
-          <!-- Activity Types -->
           <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/60 hover:shadow-md transition-shadow">
             <h3 class="font-bold text-lg flex items-center gap-2 mb-4"><span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-layer-group"></i></span> Klasifikasi Kegiatan</h3>
             <div class="space-y-2 max-h-[340px] overflow-y-auto pr-1 custom-scrollbar">
@@ -469,7 +360,6 @@
         </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <!-- Bar Chart -->
           <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/60 hover:shadow-md transition-shadow">
             <h3 class="font-bold text-sm flex items-center gap-2 mb-5"><i class="fa-solid fa-chart-simple text-emerald-600"></i> ST per Jenis Kegiatan</h3>
             <div class="space-y-4">
@@ -479,8 +369,6 @@
               </div>
             </div>
           </div>
-          
-          <!-- Agenda -->
           <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/60 hover:shadow-md transition-shadow">
             <h3 class="font-bold text-sm flex items-center gap-2 mb-4"><i class="fa-regular fa-calendar-check text-emerald-600"></i> Agenda ST Terdekat</h3>
             <div class="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
@@ -497,8 +385,6 @@
               <p v-if="!upcomingLetters.length" class="text-center py-8 text-slate-400 text-sm">Belum ada agenda ST.</p>
             </div>
           </div>
-          
-          <!-- Audit Trail -->
           <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/60 hover:shadow-md transition-shadow">
             <h3 class="font-bold text-sm flex items-center gap-2 mb-5"><i class="fa-solid fa-timeline text-emerald-600"></i> Jejak Aktivitas</h3>
             <div class="relative pl-5 space-y-5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
@@ -517,7 +403,6 @@
         </div>
       </section>
 
-      <!-- ============ LETTERS ============ -->
       <section v-if="tab === 'letters'" class="space-y-5 animate-fade-up">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div><h2 class="text-2xl font-extrabold text-slate-800">Surat Tugas (ST)</h2><p class="text-sm text-slate-500">Alur ringkas: Koordinator/Pimpinan menyusun → Pimpinan menyetujui = langsung terbit → pelaksanaan → laporan.</p></div>
@@ -534,11 +419,9 @@
           </div>
         </div>
         
-        <!-- Filter Bar Surat Tugas -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col lg:flex-row gap-3 sticky top-[72px] z-20">
           <div class="relative flex-1">
             <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400" aria-hidden="true"></i>
-            <!-- PATCH #17: search input debounce -->
             <input v-model="qLetterInput" placeholder="Cari nama kegiatan, nomor…" aria-label="Cari surat tugas" class="inp !text-sm !pl-10 w-full shadow-inner bg-slate-50 focus:bg-white transition-colors">
           </div>
           <select v-model="filterYear" @change="resetPage('letters')" class="inp lg:w-32 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter tahun">
@@ -557,7 +440,6 @@
           </select>
         </div>
 
-        <!-- Chip Filter Klasifikasi Aktif -->
         <div v-if="fLetterClass !== 'ALL'" class="flex flex-wrap gap-2 items-center">
           <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl shadow-sm">
             <i class="fa-solid fa-filter"></i>
@@ -572,7 +454,6 @@
           <template v-for="(v, k) in LETTER_STATUS"><button v-if="countLetterStatus(k)" :key="k" @click="fLetterStatus = fLetterStatus === k ? 'ALL' : k; resetPage('letters')" :class="[v.cls, fLetterStatus === k ? 'ring-2 ring-emerald-800 scale-105 shadow-md' : 'hover:scale-105 opacity-80 hover:opacity-100']" class="px-3.5 py-1.5 rounded-full text-[11px] font-bold ring-1 transition-all duration-200">{{ v.label }}: {{ countLetterStatus(k) }}</button></template>
         </div>
 
-        <!-- Table -->
         <div class="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-left text-sm min-w-[1200px]">
@@ -591,41 +472,29 @@
               <tbody class="divide-y divide-slate-100">
                 <tr v-if="!filteredLetters.length"><td colspan="8" class="text-center py-12 text-slate-400"><i class="fa-regular fa-folder-open text-4xl mb-3 block opacity-50"></i>Tidak ada ST yang cocok dengan filter.</td></tr>
                 <tr v-for="st in paginatedLetters" :key="st.id" class="hover:bg-emerald-50/30 transition-colors group align-top">
-                  
-                  <!-- Tanggal -->
                   <td class="p-4 pl-6 whitespace-nowrap">
                     <p class="font-bold text-[13px] text-slate-800"><i class="fa-regular fa-calendar text-emerald-500 mr-1.5"></i>{{ fmtDate(st.startDate) }}</p>
                     <p v-if="st.endDate && st.endDate !== st.startDate" class="text-[11px] text-slate-500 pl-6">s.d. {{ fmtDate(st.endDate) }}</p>
                     <p v-if="st.letterDate" class="text-[10px] text-slate-400 pl-6">Tgl surat: {{ fmtDate(st.letterDate) }}</p>
                   </td>
-
-                  <!-- Waktu -->
                   <td class="p-4 whitespace-nowrap">
                     <p class="font-semibold text-[13px] text-slate-700"><i class="fa-regular fa-clock text-slate-400 mr-1.5"></i>{{ st.startTime || '--:--' }} — {{ st.endTime || '--:--' }}</p>
                     <p class="text-[10px] text-slate-400 pl-6">WIB</p>
                   </td>
-
-                  <!-- Jenis Kegiatan -->
                   <td class="p-4">
                     <span class="px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-200 text-[11px] rounded-lg font-bold inline-block break-words">{{ st.activityName }}</span>
                     <p class="mt-1.5"><span :class="st.classification === 'TERBATAS' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-sky-50 text-sky-600 border-sky-200'" class="px-2 py-0.5 rounded-md font-bold border text-[10px]">{{ st.classification }}</span></p>
                   </td>
-
-                  <!-- Nama Kegiatan -->
                   <td class="p-4">
                     <p class="font-bold leading-snug text-slate-800 group-hover:text-emerald-700 transition-colors cursor-pointer break-words" @click="detailLetter = st">{{ st.title }}</p>
                     <p class="text-[11px] text-slate-400 font-mono mt-1">{{ st.code }} · {{ st.officialNumber || st.draftNumber }}</p>
                     <p v-if="st.status === 'REJECTED' && st.approvalNote" class="text-[11px] text-red-600 mt-1 bg-red-50 p-1.5 rounded border border-red-100"><i class="fa-solid fa-circle-info mr-1"></i>{{ st.approvalNote }}</p>
                   </td>
-
-                  <!-- Lokasi -->
                   <td class="p-4 text-xs">
                     <p class="font-semibold text-slate-800 flex items-start gap-1.5"><i class="fa-solid fa-location-dot mt-0.5 text-emerald-500 shrink-0"></i> <span class="leading-snug break-words">{{ st.locationName || '-' }}</span></p>
                     <p class="text-[11px] text-slate-500 mt-1 pl-[18px] break-words"><i class="fa-solid fa-house-chimney text-slate-300 text-[9px] mr-1"></i>{{ st.village || '-' }}</p>
                     <p class="text-[11px] text-slate-400 mt-0.5 pl-[18px] font-mono break-words">{{ st.location || '-' }}</p>
                   </td>
-
-                  <!-- Petugas -->
                   <td class="p-4 text-xs">
                     <template v-if="st.personnel.length">
                       <p class="font-bold text-slate-700 truncate">{{ st.teamLeader }} <span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] font-extrabold uppercase ml-1 border border-amber-200">Ketua</span></p>
@@ -635,16 +504,11 @@
                     </template>
                     <span v-else class="text-slate-400 italic">Belum ada petugas</span>
                   </td>
-
-                  <!-- Status -->
                   <td class="p-4">
                     <span :class="(LETTER_STATUS[st.status] || {}).cls" class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold ring-1 shadow-sm whitespace-nowrap">{{ (LETTER_STATUS[st.status] || {}).label || st.status }}</span>
                   </td>
-
-                  <!-- Aksi -->
                   <td class="p-4 pr-6">
                     <div class="flex justify-end gap-1.5 flex-wrap">
-                      <!-- PATCH #25: aria-label pada tombol ikon -->
                       <button @click="detailLetter = st" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors" title="Detail" aria-label="Lihat detail surat tugas"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
                       <button v-if="st.status === 'PENDING_APPROVAL' && role === 'PIMPINAN'" @click="openNote('approveLetter', st.id, 'Setujui & Terbitkan ' + st.code, false)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors" title="Setujui & Terbitkan" aria-label="Setujui dan terbitkan"><i class="fa-solid fa-stamp" aria-hidden="true"></i></button>
                       <button v-if="(st.status === 'READY_TO_ISSUE' || (st.status === 'DRAFT' && role === 'PIMPINAN')) && canIssueLetter" @click="issueLetter(st)" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold rounded-lg shadow-sm transition-colors" title="Terbitkan" aria-label="Terbitkan"><i class="fa-solid fa-file-circle-check" aria-hidden="true"></i></button>
@@ -655,7 +519,6 @@
               </tbody>
             </table>
           </div>
-          <!-- PATCH #21 + #22: Empty state + window pagination untuk ST -->
           <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/30 gap-4">
             <span v-if="filteredLetters.length" class="text-[11px] text-slate-500">
               Menampilkan <b>{{ Math.min((currentPage.letters - 1) * itemsPerPage + 1, filteredLetters.length) }}</b> - <b>{{ Math.min(currentPage.letters * itemsPerPage, filteredLetters.length) }}</b> dari <b>{{ filteredLetters.length }}</b> data
@@ -673,7 +536,6 @@
         </div>
       </section>
 
-      <!-- ============ REPORTS ============ -->
       <section v-if="tab === 'reports'" class="space-y-5 animate-fade-up">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div><h2 class="text-2xl font-extrabold text-slate-800">Laporan Kegiatan</h2><p class="text-sm text-slate-500">Laporan hanya dari ST terbit. Laporan terverifikasi otomatis melahirkan tindak lanjut.</p></div>
@@ -684,11 +546,9 @@
           </div>
         </div>
         
-        <!-- Filter Bar Laporan -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row gap-3">
           <div class="relative flex-1">
             <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400" aria-hidden="true"></i>
-            <!-- PATCH #17: search input debounce -->
             <input v-model="qReportInput" placeholder="Cari kode, nomor ST, kegiatan, lokasi…" aria-label="Cari laporan" class="inp !text-sm !pl-10 w-full bg-slate-50 focus:bg-white transition-colors shadow-inner">
           </div>
           <select v-model="filterYear" @change="resetPage('reports')" class="inp sm:w-32 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter tahun">
@@ -722,15 +582,11 @@
                   </td>
                 </tr>
                 <tr v-for="rep in paginatedReports" :key="rep.id" class="hover:bg-emerald-50/30 transition-colors group">
-                  
-                  <!-- 1. Kolom Kode & ST -->
                   <td class="p-4 pl-6 align-top">
                     <p class="font-bold text-slate-800 group-hover:text-emerald-700 cursor-pointer break-words" @click="detailReport = rep">{{ rep.code }}</p>
                     <p class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded inline-block mt-1 border border-emerald-100"><i class="fa-solid fa-link text-[8px]"></i> {{ rep.stNumber || '-' }}</p>
                     <p class="text-[10px] text-slate-400 mt-1.5"><i class="fa-regular fa-clock mr-1"></i>{{ fmtDateTime(rep.actualTime) }}</p>
                   </td>
-
-                  <!-- 2. Kolom Uraian Pelaksanaan -->
                   <td class="p-4 text-xs align-top">
                     <p class="font-bold text-sm text-slate-800 mb-1.5">{{ rep.activityName }}</p>
                     <p class="text-slate-600 leading-relaxed line-clamp-4 break-words" :title="rep.description">{{ rep.description }}</p>
@@ -738,27 +594,18 @@
                       <i class="fa-solid fa-circle-info mr-1"></i>{{ rep.verificationNote }}
                     </p>
                   </td>
-
-                  <!-- 3. Kolom Hasil / Temuan -->
                   <td class="p-4 text-xs align-top">
                     <p class="text-slate-600 leading-relaxed line-clamp-4 break-words" :title="rep.results">{{ rep.results || '-' }}</p>
                   </td>
-
-                  <!-- 4. Kolom Pelanggaran & Bukti -->
                   <td class="p-4 text-xs align-top">
                     <p class="font-bold text-slate-700"><i class="fa-solid fa-user-xmark text-red-400 mr-1"></i> {{ rep.violatorCount }} temuan</p>
                     <span class="px-2 py-1 bg-slate-100 text-slate-600 font-semibold rounded-md border border-slate-200 inline-block mt-2 shadow-sm whitespace-nowrap"><i class="fa-solid fa-paperclip text-slate-400"></i> {{ rep.evidenceList.length }} berkas</span>
                   </td>
-
-                  <!-- 5. Kolom Status -->
                   <td class="p-4 align-top">
                     <span :class="(REPORT_STATUS[rep.status] || {}).cls" class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold ring-1 shadow-sm whitespace-nowrap">{{ (REPORT_STATUS[rep.status] || {}).label || rep.status }}</span>
                   </td>
-
-                  <!-- 6. Kolom Aksi -->
                   <td class="p-4 pr-6 align-top">
                     <div class="flex justify-end gap-1.5 flex-wrap">
-                      <!-- PATCH #25: aria-label -->
                       <button @click="detailReport = rep" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors" title="Detail" aria-label="Lihat detail laporan"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
                       <button v-if="rep.status === 'SUBMITTED' && ['KOORDINATOR','ADMIN'].includes(role)" @click="openNote('verifyReport', rep.id, 'Verifikasi ' + rep.code, false)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors" title="Verifikasi" aria-label="Verifikasi laporan"><i class="fa-solid fa-user-check" aria-hidden="true"></i></button>
                       <button v-if="['DRAFT','RETURNED'].includes(rep.status)" @click="openEditReport(rep)" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg transition-colors border border-blue-200" title="Revisi" aria-label="Revisi laporan"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
@@ -768,7 +615,6 @@
               </tbody>
             </table>
           </div>
-          <!-- PATCH #21 + #22: Empty state + window pagination untuk Reports -->
           <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/30 gap-4">
             <span v-if="filteredReports.length" class="text-[11px] text-slate-500">
               Menampilkan <b>{{ Math.min((currentPage.reports - 1) * itemsPerPage + 1, filteredReports.length) }}</b> - <b>{{ Math.min(currentPage.reports * itemsPerPage, filteredReports.length) }}</b> dari <b>{{ filteredReports.length }}</b> data
@@ -786,7 +632,6 @@
         </div>
       </section>
 
-      <!-- ============ FOLLOWUPS ============ -->
       <section v-if="tab === 'followups'" class="space-y-5 animate-fade-up">
         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div><h2 class="text-2xl font-extrabold text-slate-800">Manajemen Tindak Lanjut</h2><p class="text-sm text-slate-500">Aksi lanjutan laporan terverifikasi — PIC, prioritas, tenggat. Merah = lewat tenggat.</p></div>
@@ -805,7 +650,6 @@
             <div v-if="isOverdue(fu)" class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-400"></div>
             <div v-else-if="fu.status === 'SELESAI'" class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500"></div>
             <div v-else class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-yellow-300"></div>
-            
             <div>
               <div class="flex justify-between gap-2 mb-3 flex-wrap mt-1">
                 <span class="px-2.5 py-1 bg-violet-50 text-violet-700 text-[10px] font-bold rounded-lg uppercase border border-violet-100"><i class="fa-solid fa-user-tag mr-1"></i> {{ fu.pic || '-' }}</span>
@@ -831,7 +675,6 @@
           </div>
         </div>
 
-        <!-- PATCH #21 + #22: Empty state + window pagination untuk Fu -->
         <div v-if="filteredFu.length" class="flex flex-col sm:flex-row items-center justify-between bg-white border border-slate-200 rounded-3xl p-4 shadow-sm mt-4 gap-4">
           <span class="text-[11px] text-slate-500">
             Menampilkan <b>{{ Math.min((currentPage.fu - 1) * itemsPerPage + 1, filteredFu.length) }}</b> - <b>{{ Math.min(currentPage.fu * itemsPerPage, filteredFu.length) }}</b> dari <b>{{ filteredFu.length }}</b> data
@@ -847,7 +690,6 @@
         </div>
       </section>
 
-      <!-- ============ REKAP ============ -->
       <section v-if="tab === 'rekap'" class="space-y-6 animate-fade-up">
         <div><h2 class="text-2xl font-extrabold text-slate-800">Rekapitulasi &amp; Statistik Kinerja</h2><p class="text-sm text-slate-500">Dihitung real-time dari seluruh dokumen di Spreadsheet.</p></div>
         
@@ -884,7 +726,6 @@
         </div>
       </section>
 
-<!-- ============ ADMIN ============ -->
       <section v-if="tab === 'admin' && role === 'ADMIN'" class="space-y-5 animate-fade-up">
         <div><h2 class="text-2xl font-extrabold text-slate-800">Administrasi Sistem</h2><p class="text-sm text-slate-500">Kelola 8 master data terintegrasi langsung dengan Spreadsheet.</p></div>
         
@@ -981,7 +822,6 @@
               </tbody>
             </table>
           </div>
-          <!-- PATCH #21 + #22: Empty state + window pagination untuk Master -->
           <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/30 gap-4">
             <span v-if="masterRows.length" class="text-[11px] text-slate-500">
               Menampilkan <b>{{ Math.min((currentPage.master - 1) * itemsPerPage + 1, masterRows.length) }}</b> - <b>{{ Math.min(currentPage.master * itemsPerPage, masterRows.length) }}</b> dari <b>{{ masterRows.length }}</b> data
@@ -1021,7 +861,6 @@
               </tbody>
             </table>
           </div>
-          <!-- PATCH #21 + #22: Empty state + window pagination untuk Audit -->
           <div v-if="data.auditLogs.length" class="flex flex-col sm:flex-row items-center justify-between pt-4 mt-4 border-t border-slate-100 gap-4">
             <span class="text-[11px] text-slate-500">
               Menampilkan <b>{{ Math.min((currentPage.audit - 1) * itemsPerPage + 1, data.auditLogs.length) }}</b> - <b>{{ Math.min(currentPage.audit * itemsPerPage, data.auditLogs.length) }}</b> dari <b>{{ data.auditLogs.length }}</b> entri
@@ -1038,7 +877,6 @@
         </div>
       </section>
 
-<!-- Style khusus animasi modal -->
 <style>
   @keyframes modalEnter {
     from { opacity: 0; transform: scale(0.95) translateY(15px); }
@@ -1050,11 +888,8 @@
 </style>
 
 <!-- ===== MODAL FORM ST ===== -->
-<!-- PATCH #20: backdrop click close -->
 <div v-if="letterForm" @click.self="letterForm = null" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] w-full max-w-4xl p-5 sm:p-7 space-y-6 my-4 max-h-[94vh] overflow-y-auto border border-white/20 custom-scrollbar">
-    
-    <!-- Header -->
     <div class="flex justify-between items-start gap-4 border-b border-slate-100 pb-4 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
       <div class="flex gap-3">
         <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
@@ -1068,7 +903,6 @@
       <button @click="letterForm = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all" aria-label="Tutup modal"><i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i></button>
     </div>
 
-    <!-- Info Banner -->
     <div :class="role === 'PIMPINAN' ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'" class="p-4 rounded-2xl border flex gap-3 text-xs leading-relaxed shadow-sm">
       <i :class="role === 'PIMPINAN' ? 'fa-solid fa-stamp text-amber-500 text-lg' : 'fa-solid fa-circle-info text-emerald-500 text-lg'"></i>
       <div>
@@ -1077,12 +911,8 @@
       </div>
     </div>
 
-    <!-- Form Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-      
-      <!-- Baris 1: Jenis Kegiatan -->
       <div class="md:col-span-2">
-        <!-- PATCH #26: label for + input id -->
         <label for="st-activity" class="lbl flex items-center"><span class="rown">1</span>Jenis Kegiatan <span class="text-red-500 ml-1">*</span></label>
         <select id="st-activity" v-model="letterForm.activityCode" class="inp font-bold text-slate-800 bg-slate-50 focus:bg-white text-sm py-3 shadow-sm"><option v-for="a in data.activityTypes" :value="a.code">{{ a.name }} ({{ a.classification }})</option></select>
         <div v-if="actOfForm" class="flex items-center gap-2 mt-2 flex-wrap">
@@ -1091,7 +921,6 @@
         </div>
       </div>
 
-      <!-- Baris 2: Dasar Surat & Tanggal -->
       <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-5">
         <div class="md:col-span-2">
           <label for="st-legal" class="lbl flex items-center"><span class="rown">2</span>Dasar Surat <span class="text-red-500 ml-1">*</span></label>
@@ -1103,7 +932,6 @@
         </div>
       </div>
 
-      <!-- Baris 3: Nama Kegiatan (Dropdown + Manual) — PATCH #14 & #18 -->
       <div class="md:col-span-2">
         <label for="st-title" class="lbl flex items-center"><span class="rown">3</span>Nama Kegiatan <span class="text-red-500 ml-1">*</span></label>
         <select id="st-title" :value="presets.includes(letterForm.title) ? letterForm.title : '__MANUAL__'" 
@@ -1119,7 +947,6 @@
         </div>
       </div>
 
-      <!-- Baris 4 & 5: Waktu Mulai & Selesai -->
       <div class="md:col-span-2 space-y-4">
         <div>
           <label for="st-startDate" class="lbl flex items-center"><span class="rown">4</span>Waktu Mulai</label>
@@ -1137,7 +964,6 @@
         </div>
       </div>
 
-      <!-- Baris 6: Lokasi -->
       <div class="md:col-span-2">
         <label for="st-kec" class="lbl flex items-center"><span class="rown">6</span>Lokasi Tugas (Kecamatan → Desa → Nama Lokasi) <span class="text-red-500 ml-1">*</span></label>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1162,7 +988,6 @@
         </div>
       </div>
 
-      <!-- Baris 7: Petugas -->
       <div class="md:col-span-2">
         <label class="lbl flex items-center"><span class="rown">7</span>Nama Petugas yang Ditugaskan <span class="text-red-500 ml-1">*</span></label>
         <div class="border border-slate-200 rounded-2xl p-4 space-y-4 bg-slate-50/50">
@@ -1197,7 +1022,6 @@
         </div>
       </div>
 
-      <!-- Baris 8: Kendaraan & Peralatan -->
       <div>
         <label class="lbl flex items-center"><span class="rown">8</span>Kendaraan</label>
         <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1 border border-slate-200 rounded-2xl p-2 bg-slate-50/50 custom-scrollbar">
@@ -1219,13 +1043,11 @@
         </div>
       </div>
 
-      <!-- Baris 9: Catatan -->
       <div class="md:col-span-2">
         <label for="st-notes" class="lbl flex items-center"><span class="rown">9</span>Catatan Tambahan</label>
         <textarea id="st-notes" rows="2" v-model="letterForm.notes" placeholder="Catatan tambahan: titik kumpul & jam apel, hal diwaspadai…" class="inp focus:ring-emerald-500/20"></textarea>
       </div>
 
-      <!-- Detail Pelengkap -->
       <div class="md:col-span-2 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/30">
         <button type="button" @click="showExtra = !showExtra" class="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-100 transition-colors text-left group" aria-expanded="true">
           <span class="text-xs font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-sliders text-emerald-600 group-hover:rotate-90 transition-transform"></i> Detail Pelengkap <span class="font-normal text-slate-400 hidden sm:inline">— penandatangan &amp; maksud tujuan</span></span>
@@ -1245,7 +1067,6 @@
 
     </div>
 
-    <!-- Footer Actions -->
     <div class="flex flex-wrap justify-end gap-3 pt-5 border-t border-slate-100 sticky bottom-0 bg-white/95 backdrop-blur-sm">
       <button @click="letterForm = null" class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-colors">Batal</button>
       <button :disabled="busy" @click="submitLetter('draft')" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl disabled:opacity-50 transition-colors"><i class="fa-solid fa-file-pen mr-1"></i> Simpan Draf</button>
@@ -1270,7 +1091,6 @@
     </div>
     
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-      
       <div class="md:col-span-2">
         <label class="lbl">Pilih Surat Tugas (ST) Terbit <span class="text-red-500">*</span></label>
         <select v-model="reportForm.letterId" @change="reportForm.activityCode = issuedLetters.find(l => l.id === reportForm.letterId)?.activityCode" class="inp font-semibold bg-slate-50 focus:bg-white cursor-pointer">
@@ -1327,14 +1147,11 @@
       <div class="md:col-span-2">
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 border-dashed text-center transition-colors relative group" :class="isUploading ? 'opacity-50 cursor-wait' : 'hover:bg-slate-100 cursor-pointer'">
           <input type="file" multiple :disabled="isUploading" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="handleFileUpload" aria-label="Unggah lampiran">
-          
           <i v-if="!isUploading" class="fa-solid fa-cloud-arrow-up text-3xl text-blue-500 mb-2 group-hover:-translate-y-1 transition-transform"></i>
           <i v-else class="fa-solid fa-circle-notch fa-spin text-3xl text-blue-500 mb-2"></i>
-          
           <p class="text-sm font-bold text-slate-700">{{ isUploading ? 'Sedang Mengunggah...' : 'Klik atau Tarik File ke Sini' }}</p>
           <p class="text-[11px] text-slate-500 mt-1">Mendukung format gambar (JPG/PNG) atau PDF. Maks 3MB/file.</p>
         </div>
-        
         <div class="flex flex-wrap gap-2 mt-3" v-if="reportForm.evidenceList && reportForm.evidenceList.length">
           <span v-for="(ev, i) in reportForm.evidenceList" :key="i" class="px-3 py-1.5 bg-white text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 shadow-sm flex items-center gap-2">
             <i class="fa-regular fa-file text-blue-500"></i> 
@@ -1345,7 +1162,6 @@
           </span>
         </div>
       </div>
-
     </div>
     
     <div class="flex flex-wrap justify-end gap-3 pt-5 border-t border-slate-100">
@@ -1389,7 +1205,6 @@
 <!-- ===== DETAIL ST (PREVIEW SURAT A4) ===== -->
 <div v-if="detailLetter" @click.self="detailLetter = null" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-slate-50 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col my-4 max-h-[95vh] border border-white/20">
-    
     <div class="flex justify-between items-center gap-4 p-4 sm:px-6 bg-white border-b border-slate-200 shrink-0 rounded-t-2xl">
       <div>
         <h3 class="font-extrabold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-file-signature text-emerald-600"></i> Pratinjau Surat Tugas</h3>
@@ -1399,9 +1214,7 @@
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar bg-slate-200/50">
-      
       <div class="bg-white mx-auto shadow-md border border-slate-300 w-full max-w-[210mm] min-h-[297mm] p-8 sm:p-12 text-slate-900 font-serif text-[11px] leading-relaxed relative">
-        
         <div class="flex items-center gap-4 border-b-[3px] border-black pb-3 mb-1">
           <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBkPSJNNTAgMTBhNDAgNDAgMCAwIDAgMCA4MCA0MCA0MCAwIDAgMCAwLTgwIiBmaWxsPSIjMDY0ZTNkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IndoaXRlIj5UPC90ZXh0Pjwvc3ZnPg==" class="w-16 h-16 object-contain" alt="Logo">
           <div class="text-center flex-1 uppercase">
@@ -1411,12 +1224,10 @@
           </div>
         </div>
         <div class="border-b border-black mb-6"></div>
-
         <div class="text-center mb-6">
           <h3 class="text-base font-bold underline tracking-wider uppercase">Surat Tugas</h3>
           <p class="mt-1">Nomor: {{ detailLetter.officialNumber || detailLetter.draftNumber || '-' }}</p>
         </div>
-
         <div class="space-y-3 text-justify">
           <div>
             <p class="font-bold mb-1">Dasar:</p>
@@ -1426,10 +1237,8 @@
               <li>{{ detailLetter.legalBasis || 'Peraturan perundang-undangan yang berlaku.' }}</li>
             </ol>
           </div>
-
           <p class="text-center font-bold my-4">Memberikan Tugas :</p>
           <p>Kepada Petugas Satpol PPK yang namanya tercantum di bawah ini :</p>
-
           <table class="w-full border-collapse border border-black mt-2 mb-4">
             <thead>
               <tr class="bg-slate-50">
@@ -1453,7 +1262,6 @@
               </tr>
             </tbody>
           </table>
-
           <p class="font-bold">Untuk:</p>
           <ol class="list-decimal ml-5 space-y-2">
             <li>
@@ -1474,10 +1282,8 @@
               </ul>
             </li>
           </ol>
-
           <p class="mt-6">Demikian Surat Tugas ini dibuat untuk dilaksanakan dengan penuh rasa tanggung jawab.</p>
         </div>
-
         <div class="mt-10 ml-auto w-[280px] text-left">
           <p>Ditetapkan di : Trenggalek</p>
           <p class="mb-4">Pada tanggal : {{ new Date((detailLetter.letterDate || detailLetter.startDate) + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) }}</p>
@@ -1487,7 +1293,6 @@
           <p>{{ detailLetter.signerRank || '-' }}</p>
           <p>NIP. {{ detailLetter.signerNip || '-' }}</p>
         </div>
-
       </div>
     </div>
 
@@ -1505,7 +1310,6 @@
           <button @click="openNote('approveLetter', detailLetter.id, 'Setujui & Terbitkan ' + detailLetter.code, false)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors">Setujui</button>
         </template>
         <button v-if="['DRAFT','REJECTED'].includes(detailLetter.status) && canCreateLetter" @click="openEditLetter(detailLetter); detailLetter = null" class="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold rounded-xl shadow-sm transition-colors" aria-label="Edit ST"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
-        <!-- PATCH #19: pre-select ST saat buat laporan -->
         <button v-if="detailLetter.status === 'ISSUED'" @click="openNewReport(detailLetter.id); detailLetter = null; tab = 'reports'" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors">Buat Laporan</button>
         <button @click="detailLetter = null" class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-colors">Tutup</button>
       </div>
@@ -1516,7 +1320,6 @@
 <!-- ===== DETAIL LAPORAN ===== -->
 <div v-if="detailReport" @click.self="detailReport = null" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] w-full max-w-4xl p-5 sm:p-7 space-y-5 my-4 max-h-[94vh] overflow-y-auto border border-white/20 custom-scrollbar text-sm">
-    
     <div class="flex justify-between items-start gap-4 border-b border-slate-100 pb-4">
       <div>
         <h3 class="font-extrabold text-xl text-slate-800">Laporan {{ detailReport.code }} — {{ detailReport.activityName }}</h3>
@@ -1643,7 +1446,6 @@
           <span class="text-xs font-bold text-amber-900"><i class="fa-solid fa-award mr-1"></i> Pejabat berwenang menandatangani ST</span>
         </label>
         
-        <!-- PATCH #23: dukungan {value, label} untuk options -->
         <select v-else-if="f.options" v-model="masterForm.values[f.name]" class="inp bg-slate-50 focus:bg-white cursor-pointer">
           <option v-for="o in f.options" :value="typeof o === 'object' ? o.value : o">{{ typeof o === 'object' ? o.label : o }}</option>
         </select>
@@ -1710,7 +1512,6 @@
     </main>
   </div>
 
-  <!-- Mobile nav -->
   <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg text-slate-400 border-t border-slate-800 flex justify-around px-2 pb-safe pt-2 z-40 shadow-[0_-5px_20px_rgba(0,0,0,0.1)]">
     <button v-for="n in navItems" :key="n.key" @click="tab = n.key" :class="tab === n.key ? 'text-emerald-400 -translate-y-1' : 'hover:text-slate-200'" class="relative flex flex-col items-center text-[10px] px-3 py-1.5 transition-all duration-300">
       <div v-if="tab === n.key" class="absolute -top-3 w-8 h-1 bg-emerald-400 rounded-b-full shadow-[0_0_10px_rgba(52,211,153,0.8)]"></div>
@@ -1727,16 +1528,11 @@
 </div>
   </div>
   
-  <!-- 3. Area Cetak (Tersembunyi di Layar) -->
   <div id="print-area" style="display:none"></div>
   
 <script>
-// PATCH #2: tambah nextTick & watch
 const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
 
-// ==========================================
-// KONSTANTA GLOBAL
-// ==========================================
 const ROLES = ["ADMIN", "KOORDINATOR", "PETUGAS", "PIMPINAN"];
 const UNITS = ["Seksi Operasional dan Pengendalian", "Seksi Ketertiban Umum dan Ketentraman", "Seksi Penegakan Peraturan Perundang-undangan", "Bidang Linmas dan Pemadam Kebakaran", "Sekretariat"];
 
@@ -1758,7 +1554,6 @@ const REPORT_STATUS = {
   CLOSED: { label: "Ditutup", cls: "bg-teal-100 text-teal-800 ring-teal-200" },
 };
 
-// PATCH #24: hapus SPEC_LABELS & workflowSteps (dead code)
 const ACTION_OPTIONS = ["Pembinaan / himbauan", "Teguran lisan", "Teguran tertulis", "Surat pernyataan", "Penyitaan sarana/barang bukti", "Pembongkaran", "Penyegelan sementara", "Diserahkan ke PPNS / instansi terkait", "Nihil — situasi kondusif"];
 
 const FORM_TEMPLATES = {
@@ -1784,9 +1579,6 @@ const FORM_TEMPLATES = {
   ]
 };
 
-// ─────────────────────────────────────────────────────────────
-// PATCH #3: Helper baru (escape, tanggal lokal, CSV, pagination)
-// ─────────────────────────────────────────────────────────────
 function esc(s) {
   return String(s === null || s === undefined ? "" : s)
     .replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1823,20 +1615,11 @@ function fmtDateTime(s) {
   return isNaN(d) ? s : d.toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); 
 }
 
-// PATCH #4: peringatan server-side
-function genOfficial() {
-  // ⚠️ TEMPORARY CLIENT-SIDE FALLBACK.
-  // Untuk produksi: pindahkan ke backend (apiBootstrap/apiCreateLetter) dengan:
-  //   • LockService untuk mencegah race condition
-  //   • Counter atomik di sheet khusus (baca nomor terakhir + increment dalam transaksi)
-  //   • Validasi keunikan nomor sebelum disimpan
-  console.warn("[SECURITY] genOfficial() dipanggil di client — pindahkan ke server untuk produksi.");
-  return "800/" + (100 + Math.floor(Math.random() * 800)) + "/406.02/" + new Date().getFullYear();
-}
+// FE-PATCH A4: genOfficial() DIHAPUS — nomor resmi sepenuhnya server-side (BE B2).
+// Tidak ada lagi fallback random di client.
 
 createApp({
   setup() {
-    // ----- STATE GLOBAL -----
     const data = ref(null); 
     const loading = ref(true); 
     const loadError = ref("");
@@ -1851,11 +1634,9 @@ createApp({
 
     const flash = ref({ text: "", type: "success" }); 
     const busy = ref(false);
-    // PATCH #5: busyMode untuk membedakan save vs load
     const busyMode = ref("save");
     const isUploading = ref(false);
 
-    // ----- STATE FILTER & PENCARIAN (PATCH #6: debounce) -----
     const qLetter = ref(""), qLetterInput = ref("");
     const fLetterStatus = ref("ALL"), fLetterAct = ref("ALL");
     const fLetterClass = ref("ALL"); 
@@ -1882,7 +1663,6 @@ createApp({
     const itemsPerPage = 25;
     function resetPage(tab) { currentPage.value[tab] = 1; }
 
-    // ----- STATE MODAL & DETAIL -----
     const detailLetter = ref(null), detailReport = ref(null);
     const letterForm = ref(null), editingLetterId = ref(null), showExtra = ref(false), petugasQuery = ref(""), manualPetugas = ref("");
     const reportForm = ref(null), editingReportId = ref(null);
@@ -1890,7 +1670,6 @@ createApp({
     const noteAction = ref(null), noteText = ref("");
     const masterForm = ref(null), confirmDel = ref(null);
 
-    // ----- FUNGSI UI & GAS BRIDGE -----
     function showFlash(text, type) { 
       flash.value = { text, type: type || "success" }; 
       setTimeout(() => { if (flash.value.text === text) flash.value.text = ""; }, 4000); 
@@ -1909,7 +1688,6 @@ createApp({
       });
     }
 
-    // PATCH #7: refresh & api dengan error handling benar
     async function refresh(throwOnError = false) {
       try { 
         data.value = await runGas("apiBootstrap"); 
@@ -1938,7 +1716,6 @@ createApp({
       }
     }
 
-    // PATCH #8: closeTopModal + Esc + guard
     function closeTopModal() {
       if (confirmDel.value) { confirmDel.value = null; return; }
       if (noteAction.value) { noteAction.value = null; return; }
@@ -1957,7 +1734,6 @@ createApp({
       refresh();
     });
 
-    // ----- COMPUTED PROPERTIES -----
     const currentUser = computed(() => data.value ? (data.value.users.find(u => u.role === role.value) || data.value.users[0]) : null);
     const actor = computed(() => ({ actorName: currentUser.value ? currentUser.value.name : "", actorRole: role.value }));
     const canCreateLetter = computed(() => ["ADMIN", "KOORDINATOR", "PIMPINAN"].includes(role.value));
@@ -2091,7 +1867,6 @@ createApp({
       return [...map.values()].filter(c => c.name.toLowerCase().includes(petugasQuery.value.toLowerCase()));
     });
 
-    // PATCH #9: FileReader onerror + try/finally
     async function handleFileUpload(event) {
       const files = event.target.files;
       if (!files || !files.length) return;
@@ -2132,7 +1907,6 @@ createApp({
       }
     }
 
-    // PATCH #11: formatDropdownLabel tanggal lokal
     function formatDropdownLabel(l) {
       const s = String(l.startDate || "");
       if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
@@ -2144,7 +1918,6 @@ createApp({
       return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')} - ${l.title}`;
     }
 
-    // PATCH #11: blankLetter tanggal lokal
     function blankLetter() {
       const today = localDateStr();
       const first = data.value.users.find(u => u.role === "PETUGAS");
@@ -2164,7 +1937,6 @@ createApp({
       };
     }
     
-    // PATCH #14: isSelPetugas precompute + onPresetChange
     const _selectedPersonnelSet = computed(() => new Set((letterForm.value && letterForm.value.personnel ? letterForm.value.personnel : []).map(p => p.name)));
     function isSelPetugas(name) { return _selectedPersonnelSet.value.has(name); }
     async function onPresetChange(e) {
@@ -2210,7 +1982,9 @@ createApp({
       const signerUser = data.value.users.find(u => u.name === f.signerName);
       const existing = editingLetterId.value ? data.value.letters.find(l => l.id === editingLetterId.value) : null;
       const status = mode === "draft" ? "DRAFT" : mode === "direct-issue" ? "ISSUED" : "PENDING_APPROVAL";
-      const officialNumber = mode === "direct-issue" ? ((existing && existing.officialNumber) || genOfficial()) : undefined;
+      
+      // FE-PATCH A1: officialNumber TIDAK dikirim dari FE.
+      // Server (BE B2) adalah satu-satunya otoritas nomor resmi.
       
       const payload = Object.assign({
         activityCode: f.activityCode, activityName: act.name || "", classification: act.classification || "INTERNAL",
@@ -2222,17 +1996,21 @@ createApp({
         assetsUsed: f.assetsUsed, status: status, createdBy: (existing && existing.createdBy) || (currentUser.value && currentUser.value.name) || "",
       }, actor.value);
       
-      if (officialNumber) payload.officialNumber = officialNumber;
       if (mode === "direct-issue") payload.approvalNote = "Diterbitkan langsung oleh Pimpinan.";
       
       const ok = editingLetterId.value
         ? await api("apiUpdateLetter", editingLetterId.value, Object.assign({}, payload, { auditDetail: "ST direvisi (" + status + ")." }))
         : await api("apiCreateLetter", payload);
         
-      if (ok) { letterForm.value = null; tab.value = "letters"; showFlash("ST berhasil disimpan."); }
+      if (ok) { 
+        letterForm.value = null; 
+        tab.value = "letters"; 
+        // FE-PATCH A1: tampilkan nomor dari respons server bila ada
+        if (ok.officialNumber) showFlash("ST terbit: " + ok.officialNumber);
+        else showFlash("ST berhasil disimpan."); 
+      }
     }
 
-    // PATCH #10: openNewReport menerima letterId
     function openNewReport(letterId) {
       if (!issuedLetters.value.length) return showFlash("Belum ada ST Terbit (ISSUED).", "error");
       editingReportId.value = null;
@@ -2268,7 +2046,6 @@ createApp({
       if (ok) { detailReport.value = null; showFlash("Laporan ditutup."); }
     }
 
-    // PATCH #11: tanggal lokal di openNewFu
     function openNewFu(report) {
       editingFuId.value = null;
       const koord = data.value.users.find(u => u.role === "KOORDINATOR");
@@ -2289,10 +2066,14 @@ createApp({
       const na = noteAction.value; if (!na) return;
       const note = noteText.value.trim(), a = actor.value, me = currentUser.value ? currentUser.value.name : "";
       if (na.kind === "approveLetter") {
-        const letter = data.value.letters.find(l => l.id === na.id);
-        const official = (letter && letter.officialNumber) || genOfficial();
-        const ok = await api("apiUpdateLetter", na.id, Object.assign({ action: "approve", officialNumber: official, approvalNote: note || "Disetujui.", auditDetail: ("Disetujui. " + note).trim() }, a));
-        if (ok) showFlash("ST disetujui & terbit.");
+        // FE-PATCH A2: tidak kirim officialNumber, ambil dari respons server
+        const res = await api("apiUpdateLetter", na.id, Object.assign({ 
+          action: "approve", 
+          approvalNote: note || "Disetujui.", 
+          auditDetail: ("Disetujui. " + note).trim() 
+        }, a));
+        if (res && res.officialNumber) showFlash("ST terbit: " + res.officialNumber);
+        else if (res) showFlash("ST disetujui.");
       } else if (na.kind === "rejectLetter") {
         if (!note) return showFlash("Alasan wajib diisi.", "error");
         const ok = await api("apiUpdateLetter", na.id, Object.assign({ action: "reject", approvalNote: note, auditDetail: "Dikembalikan: " + note }, a));
@@ -2312,16 +2093,18 @@ createApp({
       noteAction.value = null; noteText.value = ""; detailLetter.value = null; detailReport.value = null;
     }
     async function issueLetter(l) {
-      const official = l.officialNumber || genOfficial();
-      const ok = await api("apiUpdateLetter", l.id, Object.assign({ action: "issue", officialNumber: official, auditDetail: "Nomor diterbitkan: " + official }, actor.value));
-      if (ok) showFlash("ST terbit: " + official);
+      // FE-PATCH A3: tidak kirim officialNumber, ambil dari respons server
+      const res = await api("apiUpdateLetter", l.id, Object.assign({ 
+        action: "issue", 
+        auditDetail: "Menerbitkan nomor resmi." 
+      }, actor.value));
+      if (res && res.officialNumber) showFlash("ST terbit: " + res.officialNumber);
     }
     async function patchLetterStatus(l, status, detail, msg) {
       const ok = await api("apiUpdateLetter", l.id, Object.assign({ status: status, auditDetail: detail }, actor.value));
       if (ok) { showFlash(msg); detailLetter.value = null; }
     }
 
-    // PATCH #23: villages options sebagai {value,label}
     const MASTER_DEFS = computed(() => ({
       users: { label: "Pengguna & RBAC", resource: "users", columns: [{key:"name",label:"Nama & NIP"},{key:"jabatan",label:"Jabatan"},{key:"unit",label:"Unit Kerja"},{key:"role",label:"Role"},{key:"canSign",label:"can_sign"}], fields: [{name:"name",label:"Nama Lengkap",placeholder:"Nama"}, {name:"nip",label:"NIP",placeholder:"18 digit"}, {name:"pangkatGol",label:"Pangkat / Gol",options:["Juru Muda / I/a","Juru Muda Tk.I / I/b","Juru / I/c","Juru Tk.I / I/d","Pengatur Muda / II/a","Pengatur Muda Tk.I / II/b","Pengatur / II/c","Pengatur Tk.I / II/d","Penata Muda / III/a","Penata Muda Tk.I / III/b","Penata / III/c","Penata Tk.I / III/d","Pembina / IV/a","Pembina Tk.I / IV/b","Pembina Utama Muda / IV/c","Pembina Utama Madya / IV/d","Pembina Utama / IV/e"]}, {name:"jenisJabatan",label:"Jenis Jabatan",options:["Struktural", "Fungsional", "Pelaksana"]}, {name:"jabatan",label:"Jabatan"}, {name:"unit",label:"Unit Kerja",options:UNITS}, {name:"email",label:"Email",type:"email"}, {name:"noHp",label:"No HP",type:"tel"}, {name:"role",label:"Role",options:ROLES}, {name:"canSign",label:"can_sign",type:"checkbox"}] },
       activityTypes: { label: "Jenis Kegiatan", resource: "activityTypes", columns: [{key:"code",label:"Kode"},{key:"name",label:"Nama"},{key:"classification",label:"Klasifikasi"},{key:"stCode",label:"Kode ST"},{key:"reportCode",label:"Kode Laporan"}], fields: [{name:"code",label:"Kode"},{name:"name",label:"Nama"},{name:"classification",label:"Klasifikasi",options:["INTERNAL","TERBATAS"]},{name:"stCode",label:"Prefix ST"},{name:"reportCode",label:"Prefix Laporan"},{name:"description",label:"Deskripsi",type:"textarea"}] },
@@ -2352,15 +2135,15 @@ createApp({
     function confirmDeleteMaster(row) { confirmDel.value = { kind: "master", sub: adminSub.value, id: row.id, label: 'master "' + (row.name || row.perdaNo || row.code || "") + '"' }; }
     async function runDelete() {
       const c = confirmDel.value; if (!c) return;
-      const ok = c.kind === "letter" ? await api("apiDeleteLetter", c.id, { actorName: actor.value.actorName, actorRole: actor.value.actorRole }) : await api("apiDeleteMaster", MASTER_DEFS.value[c.sub].resource, c.id);
+      // FE-PATCH B: kirim actor.value ke apiDeleteMaster (BE B6 terima payload)
+      const ok = c.kind === "letter" 
+        ? await api("apiDeleteLetter", c.id, actor.value) 
+        : await api("apiDeleteMaster", MASTER_DEFS.value[c.sub].resource, c.id, actor.value);
       if (ok) { showFlash("Data dihapus."); confirmDel.value = null; detailLetter.value = null; }
     }
 
     function assetNames(codes, onlyVehicle) { return (codes || []).filter(c => { const a = data.value.assets.find(x => x.code === c); const veh = a ? a.category.toLowerCase().includes("kendaraan") : false; return onlyVehicle === undefined ? true : veh === onlyVehicle; }).map(c => { const a = data.value.assets.find(x => x.code === c); return a ? a.name : c; }).join(", ") || "-"; }
 
-    // ─────────────────────────────────────────────────────────────
-    // PATCH #12: doPrint dirombak total — escape HTML di setiap interpolasi
-    // ─────────────────────────────────────────────────────────────
     function doPrint(l) {
       const rows = (l.personnel || []).map((p, i) => `<tr>
         <td style="border:1px solid #000;padding:4px;text-align:center;font-size:11px;">${i + 1}</td>
@@ -2406,7 +2189,6 @@ createApp({
       setTimeout(() => { window.print(); }, 500);
     }
 
-    // PATCH #13: downloadCSV dengan sanitasi formula injection
     function downloadCSV(filename, headers, rows) {
       const csv = [headers.map(csvCell).join(";")].concat(rows.map(r => r.map(csvCell).join(";"))).join("\n");
       const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" })); a.download = filename; a.click(); URL.revokeObjectURL(a.href); showFlash("Berkas diunduh.");
@@ -2416,7 +2198,6 @@ createApp({
     function exportReportsCsv() { downloadCSV("rekap-laporan-kegiatan.csv", ["Kode", "No. ST", "Waktu Aktual", "Jenis Kegiatan", "Lokasi Aktual", "Uraian Pelaksanaan", "Hasil Temuan", "Jumlah Pelanggar", "Tindakan", "Acuan Perda", "Kendala", "Rekomendasi", "Status", "Diverifikasi Oleh"], filteredReports.value.map(r => [r.code, r.stNumber || "", r.actualTime || "", r.activityName, r.actualLocation || "", r.description || "", r.results || "", r.violatorCount || 0, r.actionTaken || "", r.violationRef || "", r.obstacles || "", r.recommendation || "", (REPORT_STATUS[r.status] || {}).label || r.status, r.verifiedBy || ""])); }
     function exportReportsPdf() { const rows = filteredReports.value; if (!rows.length) return showFlash("Tidak ada data.", "error"); const html = `<div style="font-family:'Times New Roman', Times, serif; color:#000; line-height:1.35; font-size:10px; padding:10px;"><div style="text-align:center; margin-bottom:14px; border-bottom:3px solid #000; padding-bottom:8px;"><h2 style="margin:0; font-size:16px; font-weight:bold;">REKAPITULASI LAPORAN KEGIATAN</h2><p style="margin:3px 0 0; font-size:12px;">SATUAN POLISI PAMONG PRAJA DAN KEBAKARAN KABUPATEN TRENGGALEK</p><p style="margin:3px 0 0; font-size:10px; color:#444;">Total: ${rows.length} data</p></div><table style="width:100%; border-collapse:collapse; font-size:8.5px;"><thead><tr style="background:#065f46; color:#fff;"><th style="border:1px solid #000; padding:3px; text-align:center; width:22px;">No</th><th style="border:1px solid #000; padding:3px; width:70px;">Kode / ST</th><th style="border:1px solid #000; padding:3px; width:60px;">Waktu</th><th style="border:1px solid #000; padding:3px;">Jenis Kegiatan</th><th style="border:1px solid #000; padding:3px;">Lokasi</th><th style="border:1px solid #000; padding:3px;">Uraian Pelaksanaan</th><th style="border:1px solid #000; padding:3px;">Hasil Temuan</th><th style="border:1px solid #000; padding:3px; text-align:center; width:32px;">Temuan</th><th style="border:1px solid #000; padding:3px; width:55px;">Status</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td style="border:1px solid #000; padding:2.5px; text-align:center;">${i + 1}</td><td style="border:1px solid #000; padding:2.5px; font-family:monospace; font-size:8px;">${esc(r.code)}<br>${esc(r.stNumber || "-")}</td><td style="border:1px solid #000; padding:2.5px;">${esc(fmtDateTime(r.actualTime))}</td><td style="border:1px solid #000; padding:2.5px;">${esc(r.activityName)}</td><td style="border:1px solid #000; padding:2.5px;">${esc(r.actualLocation || "-")}</td><td style="border:1px solid #000; padding:2.5px;">${esc((r.description || "-").slice(0, 140))}${(r.description || "").length > 140 ? "…" : ""}</td><td style="border:1px solid #000; padding:2.5px;">${esc((r.results || "-").slice(0, 140))}${(r.results || "").length > 140 ? "…" : ""}</td><td style="border:1px solid #000; padding:2.5px; text-align:center;">${Number(r.violatorCount) || 0}</td><td style="border:1px solid #000; padding:2.5px;">${esc((REPORT_STATUS[r.status] || {}).label || r.status)}</td></tr>`).join("")}</tbody></table><p style="margin-top:14px; font-size:9px; text-align:right; color:#666;">Dicetak: ${esc(new Date().toLocaleString("id-ID"))}</p></div>`; document.getElementById("print-area").innerHTML = html; setTimeout(() => window.print(), 400); showFlash("Menyiapkan PDF."); }
 
-    // PATCH #15: ekspos helper & state baru ke template
     return {
       ROLES, UNITS, LETTER_STATUS, REPORT_STATUS, ACTION_OPTIONS, MASTER_DEFS, FORM_TEMPLATES,
       data, loading, loadError, refresh, role, tab, adminSub, sidebarCollapsed, toggleSidebar, flash, busy, busyMode, currentUser,
