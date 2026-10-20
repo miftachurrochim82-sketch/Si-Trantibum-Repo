@@ -4,7 +4,6 @@
   <base target="_top">
   <meta name="description" content="Sistem Informasi Trantibum (SI TRANTIBUM) - Satuan Polisi Pamong Praja dan Kebakaran Kabupaten Trenggalek">
   
-  <!-- Favicon Perisai -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   
 <meta charset="UTF-8">
@@ -185,21 +184,23 @@
           </div>
         </div>
         <div class="flex items-center gap-3 shrink-0">
+          <!-- C1d: Header pakai data.currentUser (Session), bukan fallback -->
           <div class="hidden lg:flex items-center gap-3 bg-emerald-900/40 px-3 py-1.5 rounded-full border border-emerald-700/50">
             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-slate-900 font-extrabold text-xs shadow-inner">
-              {{ currentUser && currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U' }}
+              {{ data.currentUser && data.currentUser.name ? data.currentUser.name.charAt(0).toUpperCase() : '?' }}
             </div>
             <div class="text-right pr-2">
-              <p class="text-xs font-bold text-emerald-50 leading-tight">{{ currentUser ? currentUser.name : '' }}</p>
+              <p class="text-xs font-bold text-emerald-50 leading-tight">{{ data.currentUser ? data.currentUser.name : 'Tidak Terdaftar' }}</p>
               <p class="text-[9px] text-emerald-300/80 uppercase tracking-wider">
-                {{ currentUser && currentUser.jabatan ? currentUser.jabatan : '' }} 
-                <span v-if="currentUser && currentUser.pangkatGol"> • {{ currentUser.pangkatGol }}</span>
+                {{ data.currentUser && data.currentUser.jabatan ? data.currentUser.jabatan : (data.currentUser ? data.currentUser.role : 'Login dulu') }} 
+                <span v-if="data.currentUser && data.currentUser.pangkatGol"> • {{ data.currentUser.pangkatGol }}</span>
               </p>
             </div>
           </div>
+          <!-- C1c: Dropdown label "Debug" + title -->
           <div class="relative">
-            <select v-model="role" @change="switchRole" class="appearance-none bg-slate-900 text-xs text-white font-bold border border-emerald-600/50 rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer shadow-sm">
-              <option v-for="r in ROLES" :value="r">Simulasi: {{ r }}{{ r === 'PIMPINAN' ? ' (sign)' : '' }}</option>
+            <select v-model="role" @change="switchRole" title="⚠️ Debug UI only — role asli & izin tetap ditentukan server (BE B1). Selector ini hanya untuk uji tampilan." class="appearance-none bg-slate-900 text-xs text-white font-bold border border-emerald-600/50 rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer shadow-sm">
+              <option v-for="r in ROLES" :value="r">⚙️ Debug: {{ r }}{{ r === 'PIMPINAN' ? ' (sign)' : '' }}</option>
             </select>
             <i class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-400 pointer-events-none text-[10px]"></i>
           </div>
@@ -419,16 +420,17 @@
           </div>
         </div>
         
+        <!-- C3d: Filter ST pakai filterLettersYear/Month (terpisah dari Reports) -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col lg:flex-row gap-3 sticky top-[72px] z-20">
           <div class="relative flex-1">
             <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400" aria-hidden="true"></i>
             <input v-model="qLetterInput" placeholder="Cari nama kegiatan, nomor…" aria-label="Cari surat tugas" class="inp !text-sm !pl-10 w-full shadow-inner bg-slate-50 focus:bg-white transition-colors">
           </div>
-          <select v-model="filterYear" @change="resetPage('letters')" class="inp lg:w-32 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter tahun">
+          <select v-model="filterLettersYear" @change="resetPage('letters')" class="inp lg:w-32 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter tahun surat tugas">
             <option :value="0">Semua Tahun</option>
             <option v-for="y in yearsList" :value="y">{{ y }}</option>
           </select>          
-          <select v-model="filterMonth" @change="resetPage('letters')" class="inp lg:w-40 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter bulan">
+          <select v-model="filterLettersMonth" @change="resetPage('letters')" class="inp lg:w-40 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter bulan surat tugas">
             <option :value="0">Semua Bulan</option>
             <option v-for="m in monthsList" :value="m.val">{{ m.label }}</option>
           </select>
@@ -440,11 +442,19 @@
           </select>
         </div>
 
-        <div v-if="fLetterClass !== 'ALL'" class="flex flex-wrap gap-2 items-center">
-          <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl shadow-sm">
-            <i class="fa-solid fa-filter"></i>
-            Filter Klasifikasi: <b>{{ fLetterClass }}</b>
+        <!-- C3f: Chip filter aktif gabungan -->
+        <div v-if="fLetterClass !== 'ALL' || filterLettersYear || filterLettersMonth" class="flex flex-wrap gap-2 items-center">
+          <span v-if="fLetterClass !== 'ALL'" class="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl shadow-sm">
+            <i class="fa-solid fa-filter" aria-hidden="true"></i>
+            Klasifikasi: <b>{{ fLetterClass }}</b>
             <button @click="fLetterClass = 'ALL'; resetPage('letters')" class="ml-1 text-red-400 hover:text-red-800 transition-colors" title="Hapus filter klasifikasi" aria-label="Hapus filter klasifikasi">
+              <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+            </button>
+          </span>
+          <span v-if="filterLettersYear || filterLettersMonth" class="inline-flex items-center gap-2 px-3 py-1.5 bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold rounded-xl shadow-sm">
+            <i class="fa-solid fa-calendar" aria-hidden="true"></i>
+            Periode: <b>{{ filterLettersMonth ? (monthsList.find(m => m.val === filterLettersMonth)?.label || '') : 'Semua Bulan' }} {{ filterLettersYear || 'Semua Tahun' }}</b>
+            <button @click="filterLettersYear = 0; filterLettersMonth = 0; resetPage('letters')" class="ml-1 text-sky-400 hover:text-sky-800 transition-colors" title="Hapus filter periode" aria-label="Hapus filter periode">
               <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
             </button>
           </span>
@@ -546,16 +556,17 @@
           </div>
         </div>
         
+        <!-- C3e: Filter Reports pakai filterReportsYear/Month -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row gap-3">
           <div class="relative flex-1">
             <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400" aria-hidden="true"></i>
             <input v-model="qReportInput" placeholder="Cari kode, nomor ST, kegiatan, lokasi…" aria-label="Cari laporan" class="inp !text-sm !pl-10 w-full bg-slate-50 focus:bg-white transition-colors shadow-inner">
           </div>
-          <select v-model="filterYear" @change="resetPage('reports')" class="inp sm:w-32 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter tahun">
+          <select v-model="filterReportsYear" @change="resetPage('reports')" class="inp sm:w-32 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter tahun laporan">
             <option :value="0">Semua Tahun</option>
             <option v-for="y in yearsList" :value="y">{{ y }}</option>
           </select>          
-          <select v-model="filterMonth" @change="resetPage('reports')" class="inp sm:w-40 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter bulan">
+          <select v-model="filterReportsMonth" @change="resetPage('reports')" class="inp sm:w-40 bg-slate-50 focus:bg-white cursor-pointer" aria-label="Filter bulan laporan">
             <option :value="0">Semua Bulan</option>
             <option v-for="m in monthsList" :value="m.val">{{ m.label }}</option>
           </select>
@@ -1077,6 +1088,7 @@
 </div>
 
 <!-- ===== MODAL LAPORAN DINAMIS ===== -->
+<!-- C5a-C5b: semua label pakai for/id -->
 <div v-if="reportForm" @click.self="reportForm = null" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] w-full max-w-3xl p-5 sm:p-7 space-y-5 my-4 max-h-[94vh] overflow-y-auto border border-white/20">
     <div class="flex justify-between items-start border-b border-slate-100 pb-4">
@@ -1092,42 +1104,42 @@
     
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
       <div class="md:col-span-2">
-        <label class="lbl">Pilih Surat Tugas (ST) Terbit <span class="text-red-500">*</span></label>
-        <select v-model="reportForm.letterId" @change="reportForm.activityCode = issuedLetters.find(l => l.id === reportForm.letterId)?.activityCode" class="inp font-semibold bg-slate-50 focus:bg-white cursor-pointer">
+        <label for="rp-letter" class="lbl">Pilih Surat Tugas (ST) Terbit <span class="text-red-500">*</span></label>
+        <select id="rp-letter" v-model="reportForm.letterId" @change="reportForm.activityCode = issuedLetters.find(l => l.id === reportForm.letterId)?.activityCode" class="inp font-semibold bg-slate-50 focus:bg-white cursor-pointer">
           <option v-for="l in issuedLetters" :value="l.id">{{ formatDropdownLabel(l) }}</option>
         </select>
       </div>
       
       <div>
-        <label class="lbl">Waktu Pelaksanaan Aktual</label>
-        <input type="datetime-local" v-model="reportForm.actualTime" class="inp">
+        <label for="rp-time" class="lbl">Waktu Pelaksanaan Aktual</label>
+        <input id="rp-time" type="datetime-local" v-model="reportForm.actualTime" class="inp">
       </div>
       <div>
-        <label class="lbl">Lokasi Temuan</label>
-        <input v-model="reportForm.actualLocation" placeholder="Alun-alun, Jl. …" class="inp">
+        <label for="rp-location" class="lbl">Lokasi Temuan</label>
+        <input id="rp-location" v-model="reportForm.actualLocation" placeholder="Alun-alun, Jl. …" class="inp">
       </div>
       
       <div class="md:col-span-2">
-        <label class="lbl">Uraian Pelaksanaan Kegiatan <span class="text-red-500">*</span></label>
-        <textarea rows="3" v-model="reportForm.description" placeholder="Kronologis jalannya kegiatan…" class="inp focus:ring-emerald-500/20"></textarea>
+        <label for="rp-desc" class="lbl">Uraian Pelaksanaan Kegiatan <span class="text-red-500">*</span></label>
+        <textarea id="rp-desc" rows="3" v-model="reportForm.description" placeholder="Kronologis jalannya kegiatan…" class="inp focus:ring-emerald-500/20"></textarea>
       </div>
       <div class="md:col-span-2">
-        <label class="lbl">Hasil Temuan &amp; Penindakan <span class="text-red-500">*</span></label>
-        <textarea rows="3" v-model="reportForm.results" placeholder="Apa yang ditemukan dan tindakan apa yang diambil…" class="inp focus:ring-emerald-500/20"></textarea>
+        <label for="rp-results" class="lbl">Hasil Temuan &amp; Penindakan <span class="text-red-500">*</span></label>
+        <textarea id="rp-results" rows="3" v-model="reportForm.results" placeholder="Apa yang ditemukan dan tindakan apa yang diambil…" class="inp focus:ring-emerald-500/20"></textarea>
       </div>
       
       <div class="md:col-span-2 p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
         <p class="text-[11px] font-extrabold text-emerald-800 uppercase tracking-widest mb-3"><i class="fa-solid fa-list-check mr-1"></i> Data Spesifik Kegiatan</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div v-for="field in activeFormFields" :key="field.key">
-            <label class="lbl">{{ field.label }}</label>
-            <input v-if="field.type === 'number'" type="number" :min="field.min || 0" v-model.number="reportForm[field.key]" class="inp font-bold text-center">
-            <input v-else-if="field.type === 'text'" type="text" :placeholder="field.placeholder" v-model="reportForm[field.key]" class="inp">
-            <select v-else-if="field.type === 'select_action'" v-model="reportForm[field.key]" class="inp cursor-pointer">
+            <label :for="'rp-' + field.key" class="lbl">{{ field.label }}</label>
+            <input v-if="field.type === 'number'" :id="'rp-' + field.key" type="number" :min="field.min || 0" v-model.number="reportForm[field.key]" class="inp font-bold text-center">
+            <input v-else-if="field.type === 'text'" :id="'rp-' + field.key" type="text" :placeholder="field.placeholder" v-model="reportForm[field.key]" class="inp">
+            <select v-else-if="field.type === 'select_action'" :id="'rp-' + field.key" v-model="reportForm[field.key]" class="inp cursor-pointer">
               <option value="">— Pilih Tindakan —</option>
               <option v-for="o in ACTION_OPTIONS">{{ o }}</option>
             </select>
-            <select v-else-if="field.type === 'select_perda'" v-model="reportForm[field.key]" class="inp cursor-pointer">
+            <select v-else-if="field.type === 'select_perda'" :id="'rp-' + field.key" v-model="reportForm[field.key]" class="inp cursor-pointer">
               <option value="">— Pilih Perda —</option>
               <option v-for="v in data.violations" :value="v.perdaNo + ' — ' + v.article">{{ v.perdaNo }} {{ v.article }}</option>
             </select>
@@ -1136,17 +1148,18 @@
       </div>
       
       <div class="md:col-span-2">
-        <label class="lbl">Kendala Lapangan</label>
-        <input v-model="reportForm.obstacles" class="inp" placeholder="Nihil / Cuaca / dst">
+        <label for="rp-obstacles" class="lbl">Kendala Lapangan</label>
+        <input id="rp-obstacles" v-model="reportForm.obstacles" class="inp" placeholder="Nihil / Cuaca / dst">
       </div>
       <div class="md:col-span-2">
-        <label class="lbl">Rekomendasi Tindak Lanjut</label>
-        <input v-model="reportForm.recommendation" class="inp" placeholder="Saran untuk ke depan">
+        <label for="rp-recommendation" class="lbl">Rekomendasi Tindak Lanjut</label>
+        <input id="rp-recommendation" v-model="reportForm.recommendation" class="inp" placeholder="Saran untuk ke depan">
       </div>
       
       <div class="md:col-span-2">
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 border-dashed text-center transition-colors relative group" :class="isUploading ? 'opacity-50 cursor-wait' : 'hover:bg-slate-100 cursor-pointer'">
-          <input type="file" multiple :disabled="isUploading" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="handleFileUpload" aria-label="Unggah lampiran">
+          <!-- C2: accept attribute -->
+          <input type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,image/jpeg,image/png,image/webp,image/gif,application/pdf" :disabled="isUploading" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="handleFileUpload" aria-label="Unggah lampiran (JPG, PNG, WEBP, GIF, PDF — maks 3MB)">
           <i v-if="!isUploading" class="fa-solid fa-cloud-arrow-up text-3xl text-blue-500 mb-2 group-hover:-translate-y-1 transition-transform"></i>
           <i v-else class="fa-solid fa-circle-notch fa-spin text-3xl text-blue-500 mb-2"></i>
           <p class="text-sm font-bold text-slate-700">{{ isUploading ? 'Sedang Mengunggah...' : 'Klik atau Tarik File ke Sini' }}</p>
@@ -1173,6 +1186,7 @@
 </div>
 
 <!-- ===== MODAL TINDAK LANJUT ===== -->
+<!-- C5c: label for/id -->
 <div v-if="fuForm" @click.self="fuForm = null; editingFuId = null" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] w-full max-w-2xl p-5 sm:p-7 space-y-5 my-4 max-h-[94vh] overflow-y-auto border border-white/20">
     <div class="flex justify-between items-start border-b border-slate-100 pb-4">
@@ -1183,17 +1197,17 @@
       <button @click="fuForm = null; editingFuId = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all" aria-label="Tutup modal"><i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i></button>
     </div>
     
-    <div><label class="lbl">Laporan Sumber</label><select v-model="fuForm.reportId" class="inp bg-slate-50 cursor-pointer"><option value="">— Tanpa laporan (manual) —</option><option v-for="r in data.reports" :value="r.id">{{ r.code }} — {{ r.activityName }}</option></select></div>
-    <div><label class="lbl">Uraian Aksi yang Diperlukan <span class="text-red-500">*</span></label><textarea rows="3" v-model="fuForm.actionRequired" placeholder="Tindakan spesifik apa yang harus dilakukan PIC…" class="inp focus:ring-emerald-500/20"></textarea></div>
+    <div><label for="fu-report" class="lbl">Laporan Sumber</label><select id="fu-report" v-model="fuForm.reportId" class="inp bg-slate-50 cursor-pointer"><option value="">— Tanpa laporan (manual) —</option><option v-for="r in data.reports" :value="r.id">{{ r.code }} — {{ r.activityName }}</option></select></div>
+    <div><label for="fu-action" class="lbl">Uraian Aksi yang Diperlukan <span class="text-red-500">*</span></label><textarea id="fu-action" rows="3" v-model="fuForm.actionRequired" placeholder="Tindakan spesifik apa yang harus dilakukan PIC…" class="inp focus:ring-emerald-500/20"></textarea></div>
     
     <div class="grid sm:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-      <div><label class="lbl">PIC <span class="text-red-500">*</span></label><select v-model="fuForm.pic" class="inp bg-white shadow-sm cursor-pointer"><option v-for="u in data.users" :value="u.name">{{ u.name }} ({{ u.role }})</option></select></div>
-      <div><label class="lbl">Unit PIC</label><input v-model="fuForm.picUnit" class="inp bg-white shadow-sm"></div>
-      <div><label class="lbl">Tenggat Waktu</label><input type="date" v-model="fuForm.deadline" class="inp bg-white shadow-sm"></div>
-      <div><label class="lbl">Prioritas</label><select v-model="fuForm.priority" class="inp font-bold bg-white shadow-sm cursor-pointer"><option>Rendah</option><option>Sedang</option><option>Tinggi</option><option>Mendesak</option></select></div>
+      <div><label for="fu-pic" class="lbl">PIC <span class="text-red-500">*</span></label><select id="fu-pic" v-model="fuForm.pic" class="inp bg-white shadow-sm cursor-pointer"><option v-for="u in data.users" :value="u.name">{{ u.name }} ({{ u.role }})</option></select></div>
+      <div><label for="fu-unit" class="lbl">Unit PIC</label><input id="fu-unit" v-model="fuForm.picUnit" class="inp bg-white shadow-sm"></div>
+      <div><label for="fu-deadline" class="lbl">Tenggat Waktu</label><input id="fu-deadline" type="date" v-model="fuForm.deadline" class="inp bg-white shadow-sm"></div>
+      <div><label for="fu-priority" class="lbl">Prioritas</label><select id="fu-priority" v-model="fuForm.priority" class="inp font-bold bg-white shadow-sm cursor-pointer"><option>Rendah</option><option>Sedang</option><option>Tinggi</option><option>Mendesak</option></select></div>
     </div>
     
-    <div><label class="lbl">Catatan Progres Awal (Opsional)</label><textarea rows="2" v-model="fuForm.progressNote" class="inp focus:ring-emerald-500/20" placeholder="Misal: Sedang dikoordinasikan dengan Dishub…"></textarea></div>
+    <div><label for="fu-progress" class="lbl">Catatan Progres Awal (Opsional)</label><textarea id="fu-progress" rows="2" v-model="fuForm.progressNote" class="inp focus:ring-emerald-500/20" placeholder="Misal: Sedang dikoordinasikan dengan Dishub…"></textarea></div>
     
     <div class="flex justify-end gap-3 pt-5 border-t border-slate-100">
       <button @click="fuForm = null; editingFuId = null" class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-colors">Batal</button>
@@ -1202,7 +1216,7 @@
   </div>
 </div>
 
-<!-- ===== DETAIL ST (PREVIEW SURAT A4) ===== -->
+<!-- ===== DETAIL ST ===== -->
 <div v-if="detailLetter" @click.self="detailLetter = null" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-slate-50 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col my-4 max-h-[95vh] border border-white/20">
     <div class="flex justify-between items-center gap-4 p-4 sm:px-6 bg-white border-b border-slate-200 shrink-0 rounded-t-2xl">
@@ -1212,7 +1226,6 @@
       </div>
       <button @click="detailLetter = null" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-xl transition-all" aria-label="Tutup"><i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i></button>
     </div>
-
     <div class="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar bg-slate-200/50">
       <div class="bg-white mx-auto shadow-md border border-slate-300 w-full max-w-[210mm] min-h-[297mm] p-8 sm:p-12 text-slate-900 font-serif text-[11px] leading-relaxed relative">
         <div class="flex items-center gap-4 border-b-[3px] border-black pb-3 mb-1">
@@ -1295,7 +1308,6 @@
         </div>
       </div>
     </div>
-
     <div class="p-4 bg-white border-t border-slate-200 rounded-b-2xl shrink-0 flex flex-col sm:flex-row justify-between items-center gap-4">
       <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto">
         <span :class="(LETTER_STATUS[detailLetter.status] || {}).cls" class="inline-flex px-3 py-1.5 rounded-full text-xs font-extrabold ring-1 shadow-sm">{{ (LETTER_STATUS[detailLetter.status] || {}).label || detailLetter.status }}</span>
@@ -1427,6 +1439,7 @@
 </div>
 
 <!-- ===== MODAL MASTER ===== -->
+<!-- C5d: label for/id pakai prefix "mf-" -->
 <div v-if="masterForm" @click.self="masterForm = null" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
   <div class="modal-content bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] w-full max-w-2xl p-5 sm:p-7 space-y-5 my-4 max-h-[94vh] overflow-y-auto border border-white/20">
     <div class="flex justify-between items-start border-b border-slate-100 pb-4">
@@ -1439,20 +1452,20 @@
     
     <div class="space-y-4">
       <div v-for="f in MASTER_DEFS[masterForm.sub].fields" :key="f.name">
-        <label class="lbl">{{ f.label }} <span class="text-red-500" v-if="f.name === 'name' || f.name === 'code'">*</span></label>
+        <label :for="'mf-' + f.name" class="lbl">{{ f.label }} <span class="text-red-500" v-if="f.name === 'name' || f.name === 'code'">*</span></label>
         
-        <label v-if="f.type === 'checkbox'" class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 cursor-pointer hover:bg-amber-100 transition-colors shadow-sm">
-          <input type="checkbox" v-model="masterForm.values[f.name]" class="accent-amber-600 w-5 h-5 rounded border-amber-300">
+        <label v-if="f.type === 'checkbox'" :for="'mf-' + f.name" class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 cursor-pointer hover:bg-amber-100 transition-colors shadow-sm">
+          <input :id="'mf-' + f.name" type="checkbox" v-model="masterForm.values[f.name]" class="accent-amber-600 w-5 h-5 rounded border-amber-300">
           <span class="text-xs font-bold text-amber-900"><i class="fa-solid fa-award mr-1"></i> Pejabat berwenang menandatangani ST</span>
         </label>
         
-        <select v-else-if="f.options" v-model="masterForm.values[f.name]" class="inp bg-slate-50 focus:bg-white cursor-pointer">
+        <select v-else-if="f.options" :id="'mf-' + f.name" v-model="masterForm.values[f.name]" class="inp bg-slate-50 focus:bg-white cursor-pointer">
           <option v-for="o in f.options" :value="typeof o === 'object' ? o.value : o">{{ typeof o === 'object' ? o.label : o }}</option>
         </select>
         
-        <textarea v-else-if="f.type === 'textarea'" rows="3" v-model="masterForm.values[f.name]" :placeholder="f.placeholder" class="inp focus:ring-emerald-500/20"></textarea>
+        <textarea v-else-if="f.type === 'textarea'" :id="'mf-' + f.name" rows="3" v-model="masterForm.values[f.name]" :placeholder="f.placeholder" class="inp focus:ring-emerald-500/20"></textarea>
         
-        <input v-else :type="f.type || 'text'" v-model="masterForm.values[f.name]" :placeholder="f.placeholder" class="inp focus:ring-emerald-500/20">
+        <input v-else :id="'mf-' + f.name" :type="f.type || 'text'" v-model="masterForm.values[f.name]" :placeholder="f.placeholder" class="inp focus:ring-emerald-500/20">
       </div>
     </div>
     
@@ -1591,9 +1604,10 @@ function localDateTimeStr(d = new Date()) {
   return localDateStr(d) + "T" + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
 
+// C7: CSV cell — cegah bypass whitespace/control chars
 function csvCell(v) {
   const raw = String(v === null || v === undefined ? "" : v);
-  const safe = /^[=+\-@]/.test(raw) ? "'" + raw : raw;
+  const safe = /^[\x00-\x20]*[=+\-@]/.test(raw) ? "'" + raw : raw;
   return '"' + safe.replaceAll('"', '""') + '"';
 }
 
@@ -1615,15 +1629,13 @@ function fmtDateTime(s) {
   return isNaN(d) ? s : d.toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); 
 }
 
-// FE-PATCH A4: genOfficial() DIHAPUS — nomor resmi sepenuhnya server-side (BE B2).
-// Tidak ada lagi fallback random di client.
-
 createApp({
   setup() {
     const data = ref(null); 
     const loading = ref(true); 
     const loadError = ref("");
-    const role = ref("ADMIN"); 
+    // C1a: default safe, bukan ADMIN
+    const role = ref("PETUGAS"); 
     const tab = ref("dashboard"); 
     const adminSub = ref("users");
     const sidebarCollapsed = ref(false);
@@ -1653,9 +1665,11 @@ createApp({
       _qReportTimer = setTimeout(() => { qReport.value = v; resetPage("reports"); }, 250);
     });
     
-    const d = new Date();
-    const filterYear = ref(d.getFullYear());
-    const filterMonth = ref(d.getMonth() + 1);
+    // C3a: filter terpisah per tab, default 0 (Semua)
+    const filterLettersYear = ref(0);
+    const filterLettersMonth = ref(0);
+    const filterReportsYear = ref(0);
+    const filterReportsMonth = ref(0);
     const monthsList = [{val: 1, label: 'Januari'}, {val: 2, label: 'Februari'}, {val: 3, label: 'Maret'}, {val: 4, label: 'April'}, {val: 5, label: 'Mei'}, {val: 6, label: 'Juni'}, {val: 7, label: 'Juli'}, {val: 8, label: 'Agustus'}, {val: 9, label: 'September'}, {val: 10, label: 'Oktober'}, {val: 11, label: 'November'}, {val: 12, label: 'Desember'}];
     const yearsList = computed(() => { const cy = new Date().getFullYear(); return [cy - 1, cy, cy + 1]; });
 
@@ -1692,6 +1706,10 @@ createApp({
       try { 
         data.value = await runGas("apiBootstrap"); 
         loadError.value = ""; 
+        // C1b: sync role UI ke user sesi (BE tetap otoritatif — ini display-only)
+        if (data.value && data.value.currentUser && data.value.currentUser.role) {
+          role.value = data.value.currentUser.role;
+        }
       } catch (e) { 
         loadError.value = e.message; 
         if (throwOnError) throw e;
@@ -1727,9 +1745,14 @@ createApp({
       if (detailLetter.value) { detailLetter.value = null; return; }
     }
 
+    // C4: preloader hilang HANYA setelah loading=false
+    watch(loading, (isLoading) => {
+      if (!isLoading) {
+        const pre = document.getElementById('preloader');
+        if (pre) { pre.style.opacity = '0'; setTimeout(() => { if (pre.parentNode) pre.parentNode.removeChild(pre); }, 350); }
+      }
+    });
     onMounted(() => {
-      const pre = document.getElementById('preloader');
-      if (pre) { pre.style.opacity = '0'; setTimeout(() => { if (pre.parentNode) pre.parentNode.removeChild(pre); }, 350); }
       window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTopModal(); });
       refresh();
     });
@@ -1795,26 +1818,36 @@ createApp({
       return items.slice(0, 8);
     });
 
+    // C3b: filteredLetters pakai filterLettersYear/Month
     const filteredLetters = computed(() => !data.value ? [] : data.value.letters.filter(l => {
       const dateStr = String(l.startDate || l.letterDate || '');
       const parts = dateStr.split('T')[0].split('-');
-      if (parts.length !== 3) {
-        return (filterMonth.value === 0 && filterYear.value === 0) && (fLetterStatus.value === "ALL" || l.status === fLetterStatus.value) && (fLetterAct.value === "ALL" || l.activityCode === fLetterAct.value) && (fLetterClass.value === "ALL" || l.classification === fLetterClass.value) && (l.code + " " + l.title + " " + (l.officialNumber || "") + " " + l.location + " " + l.teamLeader).toLowerCase().includes(qLetter.value.toLowerCase());
-      }
+      const baseMatch =
+        (fLetterStatus.value === "ALL" || l.status === fLetterStatus.value) &&
+        (fLetterAct.value === "ALL" || l.activityCode === fLetterAct.value) &&
+        (fLetterClass.value === "ALL" || l.classification === fLetterClass.value) &&
+        (l.code + " " + l.title + " " + (l.officialNumber || "") + " " + l.location + " " + l.teamLeader).toLowerCase().includes(qLetter.value.toLowerCase());
+      if (parts.length !== 3) return baseMatch;
       const y = Number(parts[0]), m = Number(parts[1]);
-      return (filterYear.value === 0 || y === filterYear.value) && (filterMonth.value === 0 || m === filterMonth.value) && (fLetterStatus.value === "ALL" || l.status === fLetterStatus.value) && (fLetterAct.value === "ALL" || l.activityCode === fLetterAct.value) && (fLetterClass.value === "ALL" || l.classification === fLetterClass.value) && (l.code + " " + l.title + " " + (l.officialNumber || "") + " " + l.location + " " + l.teamLeader).toLowerCase().includes(qLetter.value.toLowerCase());
+      return baseMatch &&
+        (filterLettersYear.value === 0 || y === filterLettersYear.value) &&
+        (filterLettersMonth.value === 0 || m === filterLettersMonth.value);
     }));
     const paginatedLetters = computed(() => filteredLetters.value.slice((currentPage.value.letters - 1) * itemsPerPage, currentPage.value.letters * itemsPerPage));
     const totalLetterPages = computed(() => Math.ceil(filteredLetters.value.length / itemsPerPage) || 1);
 
+    // C3c: filteredReports pakai filterReportsYear/Month
     const filteredReports = computed(() => !data.value ? [] : data.value.reports.filter(r => {
       const dateStr = String(r.actualTime || r.createdAt || '');
       const parts = dateStr.split('T')[0].split('-');
-      if (parts.length !== 3) {
-        return (filterMonth.value === 0 && filterYear.value === 0) && (fReportStatus.value === "ALL" || r.status === fReportStatus.value) && (r.code + " " + r.stNumber + " " + r.activityName + " " + r.description + " " + r.actualLocation).toLowerCase().includes(qReport.value.toLowerCase());
-      }
+      const baseMatch =
+        (fReportStatus.value === "ALL" || r.status === fReportStatus.value) &&
+        (r.code + " " + r.stNumber + " " + r.activityName + " " + r.description + " " + r.actualLocation).toLowerCase().includes(qReport.value.toLowerCase());
+      if (parts.length !== 3) return baseMatch;
       const y = Number(parts[0]), m = Number(parts[1]);
-      return (filterYear.value === 0 || y === filterYear.value) && (filterMonth.value === 0 || m === filterMonth.value) && (fReportStatus.value === "ALL" || r.status === fReportStatus.value) && (r.code + " " + r.stNumber + " " + r.activityName + " " + r.description + " " + r.actualLocation).toLowerCase().includes(qReport.value.toLowerCase());
+      return baseMatch &&
+        (filterReportsYear.value === 0 || y === filterReportsYear.value) &&
+        (filterReportsMonth.value === 0 || m === filterReportsMonth.value);
     }));
     const paginatedReports = computed(() => filteredReports.value.slice((currentPage.value.reports - 1) * itemsPerPage, currentPage.value.reports * itemsPerPage));
     const totalReportPages = computed(() => Math.ceil(filteredReports.value.length / itemsPerPage) || 1);
@@ -1983,9 +2016,6 @@ createApp({
       const existing = editingLetterId.value ? data.value.letters.find(l => l.id === editingLetterId.value) : null;
       const status = mode === "draft" ? "DRAFT" : mode === "direct-issue" ? "ISSUED" : "PENDING_APPROVAL";
       
-      // FE-PATCH A1: officialNumber TIDAK dikirim dari FE.
-      // Server (BE B2) adalah satu-satunya otoritas nomor resmi.
-      
       const payload = Object.assign({
         activityCode: f.activityCode, activityName: act.name || "", classification: act.classification || "INTERNAL",
         title: f.title.trim(), letterDate: f.letterDate, startDate: f.startDate, startTime: f.startTime, endDate: f.endDate || f.startDate, endTime: f.endTime, 
@@ -2005,7 +2035,6 @@ createApp({
       if (ok) { 
         letterForm.value = null; 
         tab.value = "letters"; 
-        // FE-PATCH A1: tampilkan nomor dari respons server bila ada
         if (ok.officialNumber) showFlash("ST terbit: " + ok.officialNumber);
         else showFlash("ST berhasil disimpan."); 
       }
@@ -2066,7 +2095,6 @@ createApp({
       const na = noteAction.value; if (!na) return;
       const note = noteText.value.trim(), a = actor.value, me = currentUser.value ? currentUser.value.name : "";
       if (na.kind === "approveLetter") {
-        // FE-PATCH A2: tidak kirim officialNumber, ambil dari respons server
         const res = await api("apiUpdateLetter", na.id, Object.assign({ 
           action: "approve", 
           approvalNote: note || "Disetujui.", 
@@ -2093,7 +2121,6 @@ createApp({
       noteAction.value = null; noteText.value = ""; detailLetter.value = null; detailReport.value = null;
     }
     async function issueLetter(l) {
-      // FE-PATCH A3: tidak kirim officialNumber, ambil dari respons server
       const res = await api("apiUpdateLetter", l.id, Object.assign({ 
         action: "issue", 
         auditDetail: "Menerbitkan nomor resmi." 
@@ -2135,7 +2162,6 @@ createApp({
     function confirmDeleteMaster(row) { confirmDel.value = { kind: "master", sub: adminSub.value, id: row.id, label: 'master "' + (row.name || row.perdaNo || row.code || "") + '"' }; }
     async function runDelete() {
       const c = confirmDel.value; if (!c) return;
-      // FE-PATCH B: kirim actor.value ke apiDeleteMaster (BE B6 terima payload)
       const ok = c.kind === "letter" 
         ? await api("apiDeleteLetter", c.id, actor.value) 
         : await api("apiDeleteMaster", MASTER_DEFS.value[c.sub].resource, c.id, actor.value);
@@ -2144,6 +2170,7 @@ createApp({
 
     function assetNames(codes, onlyVehicle) { return (codes || []).filter(c => { const a = data.value.assets.find(x => x.code === c); const veh = a ? a.category.toLowerCase().includes("kendaraan") : false; return onlyVehicle === undefined ? true : veh === onlyVehicle; }).map(c => { const a = data.value.assets.find(x => x.code === c); return a ? a.name : c; }).join(", ") || "-"; }
 
+    // C6: doPrint render specificData (jika ada) dengan escape
     function doPrint(l) {
       const rows = (l.personnel || []).map((p, i) => `<tr>
         <td style="border:1px solid #000;padding:4px;text-align:center;font-size:11px;">${i + 1}</td>
@@ -2160,6 +2187,28 @@ createApp({
         ? safeLetterDate.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
         : "-";
       const kecName = (l.location || "").replace(/Kecamatan /i, "");
+
+      let specificHtml = "";
+      const spec = l.specificData || {};
+      const specKeys = Object.keys(spec).filter(function(k) { return spec[k]; });
+      if (specKeys.length > 0) {
+        const specLabels = {
+          route: "Rute / Titik Pos / Objek",
+          targetAudience: "Target Sasaran",
+          materialTopic: "Materi Penyuluhan",
+          threatIssue: "Isu / Potensi Kerawanan",
+          riskLevel: "Tingkat Risiko",
+          perdaRef: "Dasar Perda",
+          objectTarget: "Objek Ditertibkan",
+          massEstimate: "Estimasi Massa",
+          tacticalGear: "Peralatan Dalmas"
+        };
+        specificHtml = `<li>Keterangan Khusus:<ul style="margin:2px 0 0 20px;padding:0;">` +
+          specKeys.map(function(k) {
+            return `<li>${esc(specLabels[k] || k)}: ${esc(spec[k])}</li>`;
+          }).join("") +
+          `</ul></li>`;
+      }
 
       document.getElementById("print-area").innerHTML = `
         <style>@page { size: A4 portrait; margin: 15mm 20mm; } body { font-family: 'Times New Roman', Times, serif; font-size: 11px; line-height: 1.35; color: #000; margin: 0; padding: 0; } .header-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; } .header-table td { text-align: center; vertical-align: middle; } .header-table img { width: 60px; } .header-text1 { margin: 0; font-size: 13px; font-weight: bold; letter-spacing: 1px; } .header-text2 { margin: 0; font-size: 16px; font-weight: bold; } .header-text3 { margin: 0; font-size: 10px; } .line { border-top: 2px solid #000; border-bottom: 1px solid #000; height: 2px; margin: 8px 0 12px 0; } .title { text-align: center; margin-bottom: 12px; } .title h2 { margin: 0; font-size: 15px; font-weight: bold; text-decoration: underline; } .title p { margin: 2px 0 0; font-size: 11px; } .content p { margin: 0 0 3px; text-align: justify; } .content ol { margin: 0 0 8px 20px; padding: 0; text-align: justify; } .content ul { margin: 2px 0 2px 20px; padding: 0; } .content li { margin-bottom: 2px; } .data-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; } .data-table th { border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px; } .data-table td { border: 1px solid #000; padding: 3px; font-size: 11px; } .signature-box { margin-left: auto; width: 280px; text-align: left; margin-top: 10px; } .signature-box p { margin: 0; } .signature-space { height: 50px; }</style>
@@ -2178,7 +2227,7 @@ createApp({
           <table class="data-table"><thead><tr><th style="width:5%;">No</th><th style="width:35%;">Nama & NIP</th><th style="width:20%;">Pangkat / Gol</th><th style="width:20%;">Jabatan</th><th style="width:20%;">Keterangan</th></tr></thead><tbody>${rows}</tbody></table>
           <p style="margin-top:6px;">Untuk:</p>
           <ol>
-            <li style="margin-bottom:4px;">Melaksanakan tugas <b>${esc(l.activityName)}</b> yang berlokasi di wilayah Kecamatan <b>${esc(kecName)}</b>, dengan jadwal sebagai berikut :<ul><li>Hari, Tanggal : ${esc(fmtDate(l.startDate))} s.d. ${esc(fmtDate(l.endDate))}</li><li>Tempat : ${esc(l.locationName) || "-"}${l.village ? `, Kel. ${esc(l.village)}` : ""}, Kec. ${esc(kecName)}</li><li>Keperluan : ${esc(l.purpose) || esc(l.title)}</li></ul></li>
+            <li style="margin-bottom:4px;">Melaksanakan tugas <b>${esc(l.activityName)}</b> yang berlokasi di wilayah Kecamatan <b>${esc(kecName)}</b>, dengan jadwal sebagai berikut :<ul><li>Hari, Tanggal : ${esc(fmtDate(l.startDate))} s.d. ${esc(fmtDate(l.endDate))}</li><li>Tempat : ${esc(l.locationName) || "-"}${l.village ? `, Kel. ${esc(l.village)}` : ""}, Kec. ${esc(kecName)}</li><li>Keperluan : ${esc(l.purpose) || esc(l.title)}</li>${specificHtml}</ul></li>
             <li style="margin-bottom:4px;">Menggunakan sarana prasarana berupa Unit <b>${esc(assetNames(l.assetsUsed, true))}</b> serta peralatan pendukung lainnya guna kelancaran pelaksanaan tugas.</li>
             <li>Instruksi Khusus :<ul><li>Melaksanakan koordinasi secara intensif dengan pihak Kepolisian atau instansi terkait lainnya sesuai kebutuhan di lapangan.</li><li>Melaporkan setiap perkembangan situasi dan hasil pelaksanaan tugas secara berkala dan berjenjang kepada pimpinan.</li><li>Wajib mengutamakan aspek keselamatan personel serta masyarakat di sekitar lokasi kegiatan.</li></ul></li>
           </ol>
@@ -2198,11 +2247,12 @@ createApp({
     function exportReportsCsv() { downloadCSV("rekap-laporan-kegiatan.csv", ["Kode", "No. ST", "Waktu Aktual", "Jenis Kegiatan", "Lokasi Aktual", "Uraian Pelaksanaan", "Hasil Temuan", "Jumlah Pelanggar", "Tindakan", "Acuan Perda", "Kendala", "Rekomendasi", "Status", "Diverifikasi Oleh"], filteredReports.value.map(r => [r.code, r.stNumber || "", r.actualTime || "", r.activityName, r.actualLocation || "", r.description || "", r.results || "", r.violatorCount || 0, r.actionTaken || "", r.violationRef || "", r.obstacles || "", r.recommendation || "", (REPORT_STATUS[r.status] || {}).label || r.status, r.verifiedBy || ""])); }
     function exportReportsPdf() { const rows = filteredReports.value; if (!rows.length) return showFlash("Tidak ada data.", "error"); const html = `<div style="font-family:'Times New Roman', Times, serif; color:#000; line-height:1.35; font-size:10px; padding:10px;"><div style="text-align:center; margin-bottom:14px; border-bottom:3px solid #000; padding-bottom:8px;"><h2 style="margin:0; font-size:16px; font-weight:bold;">REKAPITULASI LAPORAN KEGIATAN</h2><p style="margin:3px 0 0; font-size:12px;">SATUAN POLISI PAMONG PRAJA DAN KEBAKARAN KABUPATEN TRENGGALEK</p><p style="margin:3px 0 0; font-size:10px; color:#444;">Total: ${rows.length} data</p></div><table style="width:100%; border-collapse:collapse; font-size:8.5px;"><thead><tr style="background:#065f46; color:#fff;"><th style="border:1px solid #000; padding:3px; text-align:center; width:22px;">No</th><th style="border:1px solid #000; padding:3px; width:70px;">Kode / ST</th><th style="border:1px solid #000; padding:3px; width:60px;">Waktu</th><th style="border:1px solid #000; padding:3px;">Jenis Kegiatan</th><th style="border:1px solid #000; padding:3px;">Lokasi</th><th style="border:1px solid #000; padding:3px;">Uraian Pelaksanaan</th><th style="border:1px solid #000; padding:3px;">Hasil Temuan</th><th style="border:1px solid #000; padding:3px; text-align:center; width:32px;">Temuan</th><th style="border:1px solid #000; padding:3px; width:55px;">Status</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td style="border:1px solid #000; padding:2.5px; text-align:center;">${i + 1}</td><td style="border:1px solid #000; padding:2.5px; font-family:monospace; font-size:8px;">${esc(r.code)}<br>${esc(r.stNumber || "-")}</td><td style="border:1px solid #000; padding:2.5px;">${esc(fmtDateTime(r.actualTime))}</td><td style="border:1px solid #000; padding:2.5px;">${esc(r.activityName)}</td><td style="border:1px solid #000; padding:2.5px;">${esc(r.actualLocation || "-")}</td><td style="border:1px solid #000; padding:2.5px;">${esc((r.description || "-").slice(0, 140))}${(r.description || "").length > 140 ? "…" : ""}</td><td style="border:1px solid #000; padding:2.5px;">${esc((r.results || "-").slice(0, 140))}${(r.results || "").length > 140 ? "…" : ""}</td><td style="border:1px solid #000; padding:2.5px; text-align:center;">${Number(r.violatorCount) || 0}</td><td style="border:1px solid #000; padding:2.5px;">${esc((REPORT_STATUS[r.status] || {}).label || r.status)}</td></tr>`).join("")}</tbody></table><p style="margin-top:14px; font-size:9px; text-align:right; color:#666;">Dicetak: ${esc(new Date().toLocaleString("id-ID"))}</p></div>`; document.getElementById("print-area").innerHTML = html; setTimeout(() => window.print(), 400); showFlash("Menyiapkan PDF."); }
 
+    // C3g + C1d: expose new state
     return {
       ROLES, UNITS, LETTER_STATUS, REPORT_STATUS, ACTION_OPTIONS, MASTER_DEFS, FORM_TEMPLATES,
       data, loading, loadError, refresh, role, tab, adminSub, sidebarCollapsed, toggleSidebar, flash, busy, busyMode, currentUser,
       qLetter, qLetterInput, fLetterStatus, fLetterAct, fLetterClass, qReport, qReportInput, fReportStatus, fFuStatus, qMaster,
-      filterYear, filterMonth, monthsList, yearsList, currentPage, itemsPerPage, resetPage,
+      filterLettersYear, filterLettersMonth, filterReportsYear, filterReportsMonth, monthsList, yearsList, currentPage, itemsPerPage, resetPage,
       detailLetter, detailReport, letterForm, editingLetterId, showExtra, petugasQuery, manualPetugas,
       reportForm, editingReportId, fuForm, editingFuId, noteAction, noteText, masterForm, confirmDel, isUploading,
       stats, navItems, pendingActions, filteredLetters, filteredReports, filteredFu, masterRows,
